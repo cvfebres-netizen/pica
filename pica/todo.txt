@@ -147,6 +147,31 @@ picar, aprovar, corrigir, auditar, restaurar).
 - [ ] Aviso por email ao gestor quando um dia fica bloqueado
 - [ ] Exportacao para o sistema de folhas de ponto da empresa
 - [ ] Relatorio mensal em PDF pronto para entregar
+- [ ] `interactive-widget=resizes-content` na meta viewport do `index.html`:
+      faz o LAYOUT (nao so o visual viewport) adaptar-se ao teclado virtual no
+      Chrome/Android 108+. Navegadores que nao conhecem a chave ignoram-na
+      (degradacao graciosas). Analise contra as assercoes de
+      `_check_frontend_responsivo.js`: as de viewport continuam a passar —
+      a mudanca e uma linha. Depois: `_sincronizar.js` + `_verificacao_final.js`
+- [ ] Teclado em iOS: SO se aparecer relato de login/formulario atras do
+      teclado. Os blocos de altura maxima e o 100dvh existem, mas dvh nao
+      acompanha o teclado. Tecnica: portar `visualViewport` -> variavel
+      `--keyboard-height` em JS vanilla (~15 linhas, sem React; fonte:
+      rl0425/use-dynamic-viewport) com DUAS guardas que a fonte documenta:
+      (a) pinch-to-zoom encolhe visualViewport.height e fingiria teclado
+      aberto — o zoom nao e bloqueado por acessibilidade, logo a variavel so
+      muda com foco num campo; (b) iOS precisa dos eventos resize E scroll.
+      Medir primeiro com `_layout_probe.js` para provar que o problema existe
+- [ ] Autofill do login: estilos `:-webkit-autofill` para email/password no
+      telemovel (o iOS preenche e pinta de fundo escuro por omissao, texto
+      ilegivel sobre o cartao claro) — nenhuma suite cobre isto. Checklist de
+      referencia: myshov/awesome-mobile-web-development
+- [ ] (futuro, referencia) Se alguma tabela tiver de permanecer TABELA em
+      ecras medios em vez de virar lista, olhar para o padrao de colunas por
+      prioridade (`data-priority` em cada `th`, revelar/ocultar por breakpoint)
+      de nadangergeo/RWD-Table-Patterns — so a ideia: o codigo exige
+      jQuery+Bootstrap e nao se adopta. A solucao atual (tabela -> lista com
+      data-label) continua a ser a certa
 
 ## Nao fazer
 
