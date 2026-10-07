@@ -5,6 +5,10 @@
 .clasp.json
 *.clasp.json
 
+# Token de API do cPanel — NUNCA versionar.
+.cpanel-access.txt
+_probe_cpanel.ps1
+
 # Dependencias
 node_modules/
 
