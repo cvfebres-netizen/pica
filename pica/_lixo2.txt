@@ -1,0 +1,25 @@
+INSPECCAO DE LIMPEZA
+  ficheiros de producao: 15 | de teste: 19 | funcoes declaradas: 268
+
+--- 1. FUNCOES QUE NINGUEM CHAMA ---
+  * apagarPicagem  (Motor.gs:63)
+  * recalcularMeuDia  (Persistencia.gs:78)
+
+--- 2. VARIAVEIS DE TOPO DECLARADAS E NUNCA USADAS ---
+  nenhum
+
+--- 3. MARCADORES DE TRABALHO EM ABERTO ---
+  [TODO] Consultas.gs:6  TESTES DE COBERTURA DO TODO (┬º99ÔÇô108, ┬º111, ┬º98)
+  [TEMP] Persistencia.gs:261  if(c.tipoCorrecao==='ADICIONAR_PICAGEM'){const h=converterValorParaDataHora_(c
+  [TODO] Seguranca.gs:142  mant├®m outro: quando uma folha cresce para sempre, TODO o custo
+  [TODO] index.html:991  mais largo que a p├ígina faz scroll horizontal de TODO o site, e o
+  [TODO] _auditoria_lixo.js:82  const MARCADORES = /\b(TODO|FIXME|XXX|HACK|TEMP|POR FAZER|DEBUG)\b/g;
+  [TODO] _check_documentacao.js:105  /* TODO o texto que diz "N cenarios" ou "N suites", e nao so a linha da tabela
+
+--- 4. console.log DENTRO DE CODIGO DE PRODUCAO ---
+  nenhum
+
+--- 5. BLOCOS DE CODIGO COMENTADOS (3+ linhas) ---
+  nenhum
+
+TOTAL DE ACHADOS: 8

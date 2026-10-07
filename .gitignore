@@ -1,0 +1,14 @@
+# Credenciais OAuth do clasp — NUNCA versionar.
+# .clasprc.json contem um clientId/clientSecret OAuth reais do utilizador.
+# picadeploy/.clasp.json guarda o scriptId do projecto do Apps Script.
+.clasprc.json
+.clasp.json
+*.clasp.json
+
+# Dependencias
+node_modules/
+
+# Sistema operativo / editores
+.DS_Store
+Thumbs.db
+*.swp

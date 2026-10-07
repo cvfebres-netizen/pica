@@ -1,0 +1,794 @@
+
+# Sistema de Picagem de Ponto — Centro Veterinário de Febres
+# Guia de instalação e passos a seguir (utilizador + instalador)
+# App: sistema de registo de ponto (Google Apps Script + frontend HTML)
+# Fuso horário: Europe/Lisbon | Runtime: V8
+
+---
+
+## 0. O que este documento é
+
+Este guia é para:
+- Quem vai instalar o sistema (configurar folhas, credenciais, triggers, web app).
+- Quem vai usar o sistema depois da instalação (colaboradores e administradores).
+
+Não é necessário copiar este ficheiro para o Apps Script. Ele serve apenas
+para acompanhar o processo passo a passo.
+
+---
+
+## 1. Pré-requisitos
+
+Antes de começar, precisa de:
+- Uma conta Google.
+- Uma nova Spreadsheet Google (é nela que ficam os dados).
+- Aceder ao editor do Apps Script associado a essa Spreadsheet.
+- Se usar clasp: Node.js instalado e acesso à linha de comandos.
+
+Importante:
+- Fuso horário da Spreadsheet: Europe/Lisbon.
+- Runtime do projeto: V8.
+- Permitir o ficheiro appsscript.json no projecto.
+
+---
+
+## 2. O que vai ser criado
+
+O sistema usa estas folhas:
+- CONFIG
+- UTILIZADORES
+- SESSOES
+- PICAGENS
+- DIAS_TRABALHO
+- CONFIG_SABADOS
+- FERIADOS
+- AUSENCIAS
+- JUSTIFICACOES
+- HORAS_EXTRA
+- CORRECOES
+- AUDITORIA
+- EXCECOES
+- RESUMO_DIARIO
+- RESUMO_SEMANAL
+- RESUMO_MENSAL
+- BACKUPS
+- TESTES
+- LOG_ERROS
+
+O sistema usa também estas funções principais:
+- setupSistema(): cria estrutura e formatos.
+- instalarSistemaComCredenciais(): instala com credenciais.
+- diagnosticoCompleto(): valida folhas, sábados e motor.
+- testeCredenciaisSimples(): confirma que as passwords ficam em texto simples.
+- instalarTriggers(): cria trigger diário de manutenção.
+- doGet(): web app.
+
+---
+
+## 3. Instalação — Resumo rápido
+
+Passos principais:
+1. Criar Spreadsheet Google.
+2. Abrir Apps Script.
+3. Colar os ficheiros .gs.
+4. Colar index.html como Index ou index.
+5. Colar appsscript.json.
+6. Executar setupSistema().
+7. Executar instalarSistemaComCredenciais().
+8. Executar diagnosticoCompleto().
+9. (Automático) dataInicio dos sábados já vem preenchida com o próximo sábado.
+10. Criar deployment web app.
+11. Testar o URL.
+
+---
+
+## 4. Instalação — Passo a passo detalhado
+
+### 4.1 Criar a Spreadsheet
+
+1. Vá a Google Sheets e criar uma nova Spreadsheet.
+2. Dê-lhe um nome claro, ex.:
+   - Picagem de Ponto CVF
+3. Não coloque dados à mão nas folhas. O setup cria as folhas e cabeçalhos.
+
+### 4.2 Abrir o Apps Script
+
+1. Na Spreadsheet, vá a Extensões > Apps Script.
+2. O projecto é criado associado à Spreadsheet.
+
+### 4.3 Colocar os ficheiros de script
+
+Há apenas uma forma de colocar o backend: os 13 ficheiros .gs (o code.gs
+monolítico foi retirado da pasta e está como code.gs.legacy; não se carrega).
+
+1. No editor do Apps Script, apague o ficheiro .gs criado por defeito (o doGet
+   vem de WebApp.gs).
+2. Crie 13 ficheiros de script com exatamente estes nomes:
+   - Calendario.gs
+   - Config.gs
+   - Consultas.gs
+   - Gestao.gs
+   - Motor.gs
+   - Persistencia.gs
+   - Relatorios.gs
+   - ResumosBackups.gs
+   - RotacaoLeitura.gs
+   - Seguranca.gs
+   - Setup.gs
+   - Utilitarios.gs
+   - WebApp.gs
+3. Cada ficheiro recebe o conteúdo do ficheiro local com o mesmo nome.
+   Um ficheiro local = um ficheiro no Apps Script. Não junte dois.
+
+Importante:
+- NUNCA cole o conteúdo de code.gs.legacy juntamente com os 13 ficheiros.
+- Motivo: em Apps Script todos os .gs partilham o mesmo âmbito global e o
+  projeto falharia com:
+    SyntaxError: Identifier 'APP' has already been declared
+  Esse erro impede o projeto inteiro de arrancar (e o login de funcionar).
+- Se algum dia quiser usar apenas um ficheiro, renomeie code.gs.legacy para
+  code.gs e remova os 13 ficheiros da pasta. Nunca as duas variantes juntas.
+
+
+### 4.4 Colocar o ficheiro HTML
+
+1. No editor do Apps Script, crie um novo ficheiro HTML.
+2. Nomeie o ficheiro como Index ou index.
+3. Recomenda-se Index.html.
+4. Cole o conteúdo de index.html.
+
+O doGet faz busca de Index ou index, por isso ambas as opções devem
+funcionar. Mas o nome do ficheiro no projecto deve corresponder ao nome que o
+Apps Script vê.
+
+### 4.5 Colocar o manifesto
+
+1. Nas Project Settings, ative Show "appsscript.json" file in editor.
+2. Cole o conteúdo de appsscript.json.
+3. Confirme que appsscript.json é JSON válido.
+4. Guarde o projecto (Ctrl+S).
+
+appsscript.json actual:
+- timeZone: Europe/Lisbon
+- runtimeVersion: V8
+- webapp.executeAs: USER_DEPLOYING
+- webapp.access: ANYONE
+- oauthScopes:
+  - spreadsheets
+  - script.scriptapp
+  - userinfo.email (identifica a conta que executa as funções de instalação)
+
+### 4.6 Executar o setup
+
+1. No editor do Apps Script, selecione a função setupSistema.
+2. Execute setupSistema().
+3. Autorizar os scopes necessários quando pedido:
+   - Spreadsheets
+   - Script
+   - Email da conta Google (usado pelas funções de instalação/credenciais)
+4. Verifique o resultado devolvido.
+
+O setup deve criar:
+- Folhas
+- Cabeçalhos
+- Configurações
+- Utilizadores iniciais
+- Configuração de sábados
+- Formatos de célula
+- Proteção de cabeçalhos
+
+### 4.7 Instalar com credenciais
+
+Os emails e passwords dos utilizadores estão na constante CREDENCIAIS_INICIAIS
+(ficheiro Config.gs) e são aplicados por instalarSistemaComCredenciais.
+
+ATENÇÃO — são as credenciais que já foram fornecidas e devem ser mantidas
+exatamente como estão. Não as altere nem as gere automaticamente: cada
+colaborador entra com o login e a password que já conhece. A validação é
+propositadamente simples (4 a 64 caracteres, sem símbolos obrigatórios) para
+não existirem recusas nem tentativas falhadas. Se alguém esquecer a password,
+use 'Repor password' no Painel — a nova é gerada uma única vez e mostrada ao
+gestor — em vez de mexer nesta lista.
+
+1. Confirme (ou altere) a lista CREDENCIAIS_INICIAIS:
+   - userId
+   - email
+   - password (mínimo 4, máximo 64 caracteres; sem regras de símbolos)
+   - perfil (ADMIN | COLABORADOR) — os emails de ADMIN autorizam as operações
+     sensíveis (password/email) quando executadas no editor
+2. Valores que vêm por defeito:
+   CREDENCIAIS_INICIAIS = [
+     ['USR_PEDRO_SILVA', 'pedromds84@gmail.com', 'pedromds84', 'ADMIN'],
+     ['USR_HUGO_SILVA', 'hugofds@outlook.com', '6y6na6cu', 'ADMIN'],
+     ['USR_CELINA_RELVA', 'celinarelva@gmail.com', 'celinarelva', 'COLABORADOR'],
+     ['USR_RITA_REIS', 'aror.arita8@hotmail.com', 'ritareis', 'COLABORADOR']
+   ]
+3. Execute instalarSistemaComCredenciais() com a conta Google de um ADMIN.
+4. Autorizar quando pedido.
+5. Verifique o resultado devolvido.
+
+Importante:
+- As passwords ficam guardadas em texto simples na coluna Password da folha
+  UTILIZADORES. Não há hash nem salt (por opção do administrador).
+- O login tolera maiúsculas/minúsculas e espaços nas pontas da password, para
+  que um Caps Lock ou um espaço colado não contem como tentativa falhada.
+- Se o login falhar, a mensagem fica no formulário (não desaparece) e diz
+  quantas tentativas faltam antes do bloqueio.
+- Se a conta ficar bloqueada, "Repor password" no Painel desbloqueia-a
+  imediatamente: o utilizador entra de seguida com a password nova.
+  O mesmo vale para `instalarSistemaComCredenciais()`, que aplica as 4
+  credenciais da lista de uma vez.
+- O web app é público (access: Anyone) e o google.script.run expõe as funções do
+  projeto: as funções que mudam password/email só aceitam sessão válida (o próprio
+  ou um ADMIN) ou execução no editor com a conta Google de um ADMIN. Um visitante
+  anónimo não as consegue executar.
+- Se instalar com outra conta Google, junte o email dessa conta como ADMIN em
+  CREDENCIAIS_INICIAIS, senão as funções sensíveis recusam a execução.
+- Se a lista estiver vazia, o sistema cria a estrutura mas o login não fica
+  disponível até definir as credenciais.
+- Os 4 utilizadores iniciais são:
+  - USR_PEDRO_SILVA — Pedro Silva — Gestor — ADMIN
+  - USR_HUGO_SILVA — Hugo Silva — Gestor — ADMIN
+  - USR_CELINA_RELVA — Celina Relva — Veterinária — COLABORADOR
+  - USR_RITA_REIS — Rita Reis — Enfermeira — COLABORADOR
+- Se o login falhar, verifique na folha UTILIZADORES se as colunas Email e
+  Password têm valores para o utilizador em causa.
+
+### 4.8 Executar diagnósticos
+
+Depois de instalar, execute:
+
+1. diagnosticoCompleto()
+   - Valida folhas.
+   - Valida configuração de sábados.
+   - Valida motor de cálculo.
+   - Todos os testes devem dar OK.
+
+2. testeCredenciaisSimples()
+   - Confirma que o modo de passwords em texto simples está ativo
+     (sem hash e sem salt).
+
+Se algum teste falhar, não avance até corrigir.
+
+### 4.9 Criar trigger diário de manutenção (opcional, mas recomendado)
+
+1. Execute instalarTriggers() com uma sessão admin.
+2. O trigger cria manutencaoDiaria diária às 03:00.
+3. Esta manutenção limpa sessões expiradas.
+
+---
+
+
+
+## 5. Configurar rotação de sábados (se for usar)
+
+A dataInicio é AUTÁTICA:
+- o setupSistema() preenche o próximo sábado em CONFIG_SABADOS;
+- re-executar setupSistema() repara linhas com DataInicio vazia;
+- no Painel > Sábados, os formulários pré-preenchem e exigem o campo;
+- criarGrupoSabado/editarGrupoSabado nunca gravam dataInicio vazia.
+
+Sem dataInicio a rotação fica inativa: nenhum sábado é considerado previsto
+e as horas trabalhadas ao sábado contam-se como extra em vez de normais.
+
+Só se precisa de mexer aqui para MUDAR a data de início da rotação:
+1. Painel > Sábados > Editar (recomendado), ou
+2. diretamente na folha CONFIG_SABADOS, coluna DataInicio (formato yyyy-mm-dd).
+
+Exemplo de configuração inicial no código:
+- GRUPO_VETERINARIOS:
+  - ordem: USR_PEDRO_SILVA, USR_CELINA_RELVA
+- GRUPO_ENFERMAGEM:
+  - ordem: USR_HUGO_SILVA, USR_RITA_REIS
+
+---
+
+## 6. Primeira edição do frontend (para o utilizador final)
+
+### 6.1 Aceder ao web app
+
+1. Abra o URL do web app.
+2. Deve aparecer o ecrã de login.
+3. Use um dos emails configurados.
+
+### 6.2 Login
+
+1. Introduza email.
+2. Introduza password.
+3. Clique em entrar.
+4. Se o login falhar, verifique:
+   - Email configurado nas folhas.
+   - Password definida corretamente.
+   - Utilizador ativo.
+   - Utilizador não bloqueado.
+
+### 6.3 Picagem
+
+O utilizador pode registar 4 tipos de picagem:
+- ENTRADA_MANHA
+- SAIDA_MANHA
+- ENTRADA_TARDE
+- SAIDA_TARDE
+
+Regra principal:
+- Não é permitido repetir o mesmo tipo no mesmo dia.
+- A sequência tem de ser válida.
+- As picagens originais nunca são apagadas.
+
+### 6.4 Resumo do dia
+
+Depois de picar, o utilizador vê:
+- Minutos planeados
+- Minutos trabalhados
+- Minutos normais
+- Minutos extra
+- Estado do dia
+- Picagens registadas
+- Resumo do horário no formato 10:00–13:00 · 14:30–19:00
+
+Os estados possíveis do dia são:
+- INCOMPLETO
+- SEM_PICAGENS
+- SEM_PICAGEM
+- SEM_HORARIO_NORMAL
+- SEM_HORAS
+- COM_EXTRA
+- TRABALHADO
+- A_TRABALHAR
+- INTERVALO
+- TERMINOU
+- REGISTADO
+
+### 6.5 Sessão e logout
+
+- A sessão tem duração limitada.
+- O utilizador pode fechar sessão a qualquer momento.
+- Ao fechar sessão:
+  - A sessão é terminada no backend.
+  - O frontend volta ao login.
+
+### 6.6 Ausências do colaborador
+
+O colaborador pode pedir e **editar as suas próprias ausências** (admin edita
+as de qualquer pessoa). O motivo é guardado como **texto literal** (segurança
+de fórmulas: um motivo como `=1+1` nunca executa como fórmula na folha).
+
+---
+
+## 7. Uso administrativo
+
+### 7.1 Login como admin
+
+1. Use as credenciais de Pedro Silva ou Hugo Silva.
+2. Ambos têm perfil ADMIN.
+3. Após login, o painel mostra funções administrativas.
+
+### 7.2 Painel administrativo
+
+O admin pode ver, entre outros:
+- Utilizadores do dia
+- Estado operacional
+- Horas planeadas, trabalhadas, normais e extra
+- Picagens
+- Exceções
+- Estado do dia
+
+### 7.3 Horas extra
+
+O admin pode:
+- Ver horas extra pendentes.
+- Aprovar horas extra.
+- Rejeitar horas extra.
+
+Regra importante:
+- A aprovação não altera a picagem original.
+- Fica registado:
+  - Administrador
+  - Data
+  - Hora
+  - Decisão
+  - Observação
+
+### 7.4 Correções
+
+O admin pode efetuar correções a picagens, por exemplo:
+- Alterar hora
+- Alterar tipo
+- Adicionar picagem
+- Remover picagem
+
+Cada correção fica registada com:
+- Valor original
+- Valor novo
+- Admin
+- Data
+- Hora
+- Motivo
+
+Importante:
+- A correção é validada antes de ser aprovada.
+- A picagem original nunca é apagada.
+- Apenas correções aprovadas entram no cálculo.
+
+
+
+### 7.5 Exceções
+
+O admin pode:
+- Consultar exceções.
+- Decidir exceções pendentes.
+
+Exceções comuns:
+- PICAGEM_INCOMPLETA
+- SEQUENCIA_PICAGENS
+- TRABALHO_DOMINGO
+- TRABALHO_FERIADO
+- ENTRADA_ANTECIPADA
+- SAIDA_TARDIA
+- SAIDA_SABADO_TARDIA
+- TRABALHO_INTERVALO
+
+### 7.6 Sessões
+
+O admin pode:
+- Listar sessões.
+- Terminar sessões de outros utilizadores.
+- Limpar sessões expiradas.
+
+Regra:
+- Não pode terminar a própria sessão por aqui.
+
+### 7.7 Utilizadores
+
+O admin pode:
+- Ver utilizadores.
+- Ver utilizadores ativos.
+- Definir email de utilizador.
+- Definir credenciais de utilizador.
+- Activar ou inactivar utilizadores.
+
+### 7.8 Sábados
+
+O admin pode:
+- Consultar grupos de sábado.
+- Consultar próximos sábados.
+- Editar grupos de sábado.
+
+### 7.9 Relatórios
+
+O admin pode consultar:
+- Relatório diário
+- Relatório semanal
+- Relatório mensal
+- Relatório global
+- Relatório de extras
+- Relatório de integridade
+
+Os relatórios são derivados do mesmo motor de cálculo do dia.
+
+### 7.10 Backups
+
+O admin pode:
+- Criar backup manual.
+- Listar backups.
+- Consultar backup por ID.
+
+Um backup guarda:
+- ID
+- DataHora
+- Tipo
+- Descrição
+- Criado por
+- Estado
+- Dados das folhas
+
+### 7.11 Auditoria
+
+O sistema regista auditoria em ações importantes, como:
+- Login
+- Logout
+- Registar picagem
+- Criar correção
+- Decidir correção
+- Decidir exceção
+- Criar backup
+- Alterar grupo de sábado
+- Terminar sessão admin
+- Limpar sessões
+
+O admin pode consultar a auditoria.
+
+### 7.12 Exportação (Excel / PDF)
+
+Debaixo de qualquer tabela do Painel existem 3 botões:
+
+1. Excel (CSV) — descarrega um .csv que abre no Excel (separador ";" e acentos
+   corretos). Exporta a tabela tal como está no ecrã, com os filtros aplicados.
+2. Google Sheets — cria uma folha nova com os mesmos dados. Abrir e usar
+   Ficheiro > Transferir > Microsoft Excel (.xlsx) ou PDF.
+3. PDF — abre a impressão do navegador sobre uma vista limpa (título, data e
+   tabela). Escolher Guardar como PDF.
+
+Notas:
+- O download do CSV pode ser bloqueado pelo navegador dentro do web app; se
+  isso acontecer, a app passa automaticamente para o caminho Google Sheets.
+- A exportação é só de leitura: não altera nenhum dado. Fica registada na
+  auditoria como EXPORTAR_TABELA.
+- Funciona em qualquer separador do Painel, incluindo os do colaborador.
+
+---
+
+## 8. Passos para o utilizador colaborador
+
+Resumo prático para Celina Relva e Rita Reis:
+1. Abra o web app.
+2. Faça login com email e password.
+3. Vea o ecrã de picagem.
+4. Registe as 4 picagens no dia:
+   - entrada manhã
+   - saída manhã
+   - entrada tarde
+   - saída tarde
+5. Vea o resumo do dia.
+6. Se necessário, consulte:
+   - as próprias picagens
+   - o próprio horário
+   - as próprias horas
+   - as próprias horas extra
+   - os próprios relatórios
+7. Se permitido, apresente justificações.
+
+O utilizador colaborador não vê dados de outros utilizadores.
+
+---
+
+## 9. Passos para o administrador
+
+Resumo prático:
+1. Abra o web app.
+2. Faça login como admin.
+3. Vea o painel administrativo do dia.
+4. Verifique pendências:
+   - Horas extra pendentes
+   - Exceções pendentes
+   - Correções pendentes
+5. Decida pendências quando necessário.
+6. Consulte relatórios quando precisar de resumo.
+7. Crie backups periodicamente.
+8. Revise auditoria se precisar de rastreio.
+
+---
+
+
+
+## 10. Check-list de validação pós-instalação
+
+Antes de considerar a instalação completa, confirme:
+- [ ] setupSistema() executou com sucesso
+- [ ] instalarSistemaComCredenciais() executou com sucesso
+- [ ] diagnosticoCompleto() devolveu OK em tudo
+- [ ] testeCredenciaisSimples() devolveu OK
+- [ ] Utilizadores têm email e password definidos
+- [ ] CONFIG_SABADOS tem dataInicio (automática pelo setup; confirmar no Painel > Sábados)
+- [ ] Web app acessível
+- [ ] Login funciona
+- [ ] Picagem funciona
+- [ ] Resumo do dia aparece
+- [ ] Admin vê painel administrativo
+- [ ] Exceções e extras funcionam
+- [ ] Backups criam corretamente
+
+---
+
+## 11. Deploy como web app
+
+### 11.1 Opção manual
+
+1. No editor do Apps Script, vá a Deploy > New deployment.
+2. Escolha tipo Web app.
+3. Configure:
+   - Execute as: Me
+   - Who has access: Anyone
+4. Clique em Deploy.
+5. Copie o URL.
+6. Teste o URL num navegador.
+
+### 11.2 Opção com clasp
+
+Se usar clasp:
+
+1. npm install -g @google/clasp
+2. clasp login
+3. cd pica
+4. clasp create --type sheets --title "Picagem de Ponto CVF"
+5. clasp push
+
+Nota:
+- O push envia os ficheiros locais da pasta pica.
+- Envia os 13 ficheiros .gs + index.html + appsscript.json.
+- NÃO envia code.gs: foi renomeado para code.gs.legacy (extensão ignorada pelo
+  clasp) exatamente para não duplicar as constantes e funções.
+- LEIA-ME.md e todo.txt não precisam de ir ao Apps Script.
+- Se não quiser que vão, remova-os da pasta antes do push.
+
+### 11.3 Nome do ficheiro HTML
+
+O doGet espera Index ou index. Recomenda-se Index.html.
+
+---
+
+## 12. Instalação no telemóvel
+
+No telemóvel, abra o URL do web app num navegador:
+- Android: Chrome
+- iPhone: Safari
+
+Depois:
+- Android:
+  - Abra o menu (⋮)
+  - Escolha Adicionar ao ecrã principal
+- iPhone:
+  - Use Partilhar
+  - Escolha Adicionar ao Ecrã Principal
+
+Isto permite usar como se fosse uma app.
+
+---
+
+## 13. Segurança e boas práticas
+
+- As passwords ficam em texto simples na coluna Password da folha UTILIZADORES
+  (decisão do administrador: simplicidade em vez de hash/salt).
+- A comparação de password é feita no backend.
+- Nunca devolver password ao frontend.
+- A folha UTILIZADORES só deve ser visível a administradores.
+- Nunca confiar no frontend para decisões administrativas.
+- O web app está publicado com acesso Anyone e o google.script.run expõe todas as
+  funções do projeto: as operações sensíveis (password/email) exigem sessão válida
+  (o próprio ou um ADMIN) ou execução no editor com a conta Google de um ADMIN
+  (lista CREDENCIAIS_INICIAIS, em Config.gs).
+- Sessões têm limite de tempo.
+- Login tem limite de tentativas e bloqueio temporário.
+- Todas as alterações administrativas devem ser auditadas.
+
+---
+
+## 14. O que fazer se algo não funcionar
+
+### 14.1 Login falha
+
+Verifique:
+- Email configurado.
+- Password configurada.
+- Utilizador ativo.
+- Utilizador não bloqueado.
+- Colunas Email e Password preenchidas na folha UTILIZADORES.
+
+Para testar diretamente no editor, execute:
+  autenticarUtilizador('pedromds84@gmail.com', 'pedromds84')
+
+Se a folha tiver Email mas Password vazia, volte a executar
+instalarSistemaComCredenciais() (ou definirCredenciaisUtilizador).
+
+Se a coluna antiga PasswordHash ainda existir, pode ignorá-la: o sistema
+passou a usar a coluna Password. Numa instalação nova ela nem é criada.
+
+### 14.2 Picagem não regista
+
+Verifique:
+- Sessão válida.
+- Sequência de picagem válida.
+- Não existe já a mesma picagem no dia.
+
+### 14.3 Sábados não aparecem como previstos
+
+Verifique:
+- CONFIG_SABADOS preenchido.
+- dataInicio definido para o grupo.
+- Utilizador no grupo certo.
+
+### 14.4 Dashboard vazio
+
+Verifique:
+- Utilizadores ativos na folha UTILIZADORES.
+
+### 14.5 Erro ao carregar a interface
+
+Isto pode acontecer se o ficheiro Index.html não existir no projecto.
+O doGet espera Index ou index.
+
+Se o web app carregar com erro e a mensagem falar de “Index”, confirme:
+- O ficheiro HTML existe no projecto Apps Script.
+- O nome é Index ou index.
+- Não tem erro de sintaxe em JavaScript no template.
+
+Se o erro for outro, verifique:
+- appsscript.json é JSON válido.
+- Os scopes incluem spreadsheets, script.scriptapp e userinfo.email.
+- O deploy web app foi criado depois de guardar tudo.
+
+---
+
+### 14.6 Erro "Identifier 'APP' has already been declared"
+
+Isto significa que o projeto tem DUAS cópias do bloco de constantes/funções.
+É o erro que impedia o login de arrancar.
+
+Como corrigir:
+1. No editor do Apps Script, veja a lista de ficheiros do projeto.
+2. Não pode haver, ao mesmo tempo:
+   - um ficheiro único com todo o backend (o antigo code.gs), e
+   - os 13 ficheiros por secção.
+3. Mantenha apenas os 13 ficheiros (.gs) e APAGUE o ficheiro monolítico
+   (normalmente chamado Code.gs ou code.gs) do projeto.
+4. Guarde (Ctrl+S) e volte a executar as funções.
+
+Para confirmar que já não há duplicações, procure no editor por:
+  const APP =
+Deve aparecer APENAS UMA ocorrência (em Config.gs).
+
+Erros semelhantes com outros nomes (SHEETS, ENUMS, HEADERS, UTILIZADORES_INICIAIS)
+têm a mesma causa e a mesma correção.
+
+---
+
+### 14.7 Exportação não descarrega (CSV)
+
+Verifique:
+- Tente o botão Google Sheets (é o caminho garantido: cria a folha e depois
+  Ficheiro > Transferir > .xlsx ou PDF).
+- O navegador não está em modo privado com bloqueio total de descargas.
+- No telemóvel, o CSV fica na pasta Transferências/Downloads.
+
+Se o botão Google Sheets falhar, confirme que a conta de deploy tem espaço no
+Drive e que a função exportarTabelaParaSheets existe no projeto (Relatorios.gs).
+
+---
+
+## 15. Notas de manutenção
+
+- A manutenção diária limpa sessões expiradas.
+- O trigger diário é instalado por instalarTriggers().
+- Os backups podem ser criados manualmente.
+- O sistema deve ser preparado para mais utilizadores, sem codificar
+  lógica apenas para os 4 iniciais.
+
+---
+
+## 16. Resumo rápido de tudo
+
+1. Criar Spreadsheet.
+2. Abrir Apps Script.
+3. Criar os 13 ficheiros .gs e colar cada ficheiro local (nunca colar code.gs.legacy).
+4. Colar index.html como Index ou index.
+5. Colar appsscript.json.
+6. Executar setupSistema().
+7. Confirmar credenciais e executar instalarSistemaComCredenciais().
+8. Executar diagnosticoCompleto() e testeCredenciaisSimples().
+9. Confirmar dataInicio dos sábados (automática; só mudar se a rotação começar noutra data).
+10. Instalar triggers com instalarTriggers().
+11. Fazer deploy web app.
+12. Testar login, picagem, resumo, admin.
+13. Backup e auditoria conforme necessário.
+
+---
+
+## 17. Contactos internos de referência
+
+Administradores iniciais:
+- Pedro Silva — Gestor — ADMIN
+- Hugo Silva — Gestor — ADMIN
+
+Colaboradores iniciais:
+- Celina Relva — Veterinária — COLABORADOR
+- Rita Reis — Enfermeira — COLABORADOR
+
+---
+
+## 18. Versão do sistema
+
+Versão actual: 1.2.0
+
+---
+
+FIM

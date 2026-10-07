@@ -1,0 +1,4573 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<!-- viewport-fit=cover: com as regras safe-area do CSS o cabeçalho e os toasts
+     já não ficam por baixo da notch (iPhone) nem da barra de gestos (Android).
+     Zoom NÃO é bloqueado (acessibilidade): era user-scalable=no + maximum-scale=1. -->
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f5b78" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b4258" media="(prefers-color-scheme: dark)">
+<!-- iOS: impede a deteção automática de datas/horas/telefones, que transformava
+     horários e datas em links azuis. -->
+<meta name="format-detection" content="telephone=no,date=no,address=no,email=no">
+<!-- Adicionar ao ecrã principal (iPhone/Android) sem barra de navegador. -->
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Picagem de Ponto">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<!-- "light" (e não "light dark"): a app tem um só tema claro; sem isto o
+     navegador pinta os controlos nativos escuros no modo escuro do sistema
+     e os campos ficam com texto claro sobre fundo escuro. -->
+<meta name="color-scheme" content="light">
+<title>Sistema de Picagem de Ponto</title>
+
+<style>
+:root{
+  --p:#0f5b78;
+  --pd:#08445c;
+  --pl:#e9f4f8;
+  --ok:#168a55;
+  --okl:#eaf8f0;
+  --warn:#c78300;
+  --warnl:#fff7df;
+  --err:#c0392b;
+  --errl:#fceceb;
+  --txt:#24323a;
+  --mut:#68777f;
+  --bg:#f4f7f9;
+  --card:#fff;
+  --bd:#dce4e8;
+  /* Sombra discreta e baixa: separa do fundo sem criar um mosaico de
+     "caixas". O realce fica por conta da cor e do peso, nao da sombra. */
+  --shadow:0 1px 2px rgba(20,50,65,.05),0 6px 16px rgba(20,50,65,.05);
+  --hair:#e8eef1;
+  --ring:0 0 0 3px rgba(15,91,120,.18);
+  --r:14px;
+  /* Numeros alinhados: o relogio muda a cada segundo e, com algarismos
+     proporcionais, saltava de lado a cada actualizacao. */
+  --num:"tabular-nums" 1;
+  /* Zonas seguras: notch/Dynamic Island no iPhone e barra de gestos no Android.
+     env() com 0px de reserva = os navegadores sem suporte não desviam nada. */
+  --safe-t:env(safe-area-inset-top,0px);
+  --safe-b:env(safe-area-inset-bottom,0px);
+  --safe-l:env(safe-area-inset-left,0px);
+  --safe-r:env(safe-area-inset-right,0px);
+  /* Alvo mínimo de toque (WCAG 2.5.5 / Material): 44px em ecrãs táteis. */
+  --tap:44px
+}
+
+*{
+  box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent
+}
+
+html,body{
+  margin:0;
+  padding:0;
+  min-height:100%;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  background:var(--bg);
+  color:var(--txt);
+  /* iOS: sem isto o texto é inflado quando a página roda para horizontal. */
+  -webkit-text-size-adjust:100%;
+  text-size-adjust:100%;
+  /* Rede de segurança para conteúdo largo (nomes/emails longos). clip em vez
+     de hidden: não cria um novo contentor de scroll e não quebra o cabeçalho
+     position:sticky. */
+  overflow-x:clip
+}
+
+button,input,select,textarea{
+  font:inherit
+}
+
+button{
+  cursor:pointer
+}
+
+/* Toque: sem atraso de 300 ms, sem seleção de texto ao carregar longamente,
+   sem destaque azul do sistema. Vale para todos os controlos do Painel. */
+button,.tab,.mini,.head-btn,.punch{
+  touch-action:manipulation;
+  -webkit-user-select:none;
+  user-select:none
+}
+
+/* Foco visível apenas para quem navega com teclado (não aparece no toque). */
+:focus-visible{
+  outline:2px solid var(--p);
+  outline-offset:2px
+}
+
+/* Preferência do sistema: sem transições nem animação infinita. */
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:.001ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:.001ms!important;
+    scroll-behavior:auto!important
+  }
+}
+
+.hidden{
+  display:none!important
+}
+
+/* LOADING */
+
+#loading{
+  position:fixed;
+  inset:0;
+  z-index:9999;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(244,247,249,.96)
+}
+
+.loading-card{
+  text-align:center;
+  padding:30px
+}
+
+.spinner{
+  width:42px;
+  height:42px;
+  margin:auto auto 15px;
+  border:4px solid #d9e6eb;
+  border-top-color:var(--p);
+  border-radius:50%;
+  animation:spin .8s linear infinite
+}
+
+@keyframes spin{
+  to{transform:rotate(360deg)}
+}
+
+/* LOGIN */
+
+#login{
+  /* 100vh no iPhone mede a janela CHEIA (com barra de endereço): o cartão
+     ficava cortado no fundo. svh = altura mais curta (sem barras) e dvh
+     acompanha as barras ao abrir/fechar o teclado. Ordem = fallback. */
+  min-height:100vh;
+  min-height:100svh;
+  min-height:100dvh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:calc(20px + var(--safe-t)) calc(20px + var(--safe-r)) calc(20px + var(--safe-b)) calc(20px + var(--safe-l));
+  background:linear-gradient(145deg,#edf6f9,#f7fafb 55%,#e9f3f7)
+}
+
+/* Teclado aberto ou paisagem num telemóvel: a caixa deixa de estar
+   centrada (ficava escondida atrás do teclado) e passa a rolar desde o topo. */
+@media screen and (max-height:560px){
+  #login{
+    align-items:flex-start;
+    padding-top:calc(16px + var(--safe-t))
+  }
+}
+
+.login-card{
+  width:100%;
+  max-width:430px;
+  background:var(--card);
+  border-radius:20px;
+  box-shadow:0 12px 40px rgba(20,50,65,.13);
+  padding:32px 26px 26px
+}
+
+.brand{
+  text-align:center;
+  margin-bottom:28px
+}
+
+.brand-icon{
+  width:70px;
+  height:70px;
+  margin:0 auto 16px;
+  border-radius:20px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:var(--p);
+  color:#fff;
+  font-weight:800;
+  font-size:24px
+}
+
+.brand h1{
+  margin:0;
+  color:var(--pd);
+  font-size:23px
+}
+
+.brand p{
+  margin:7px 0 0;
+  color:var(--mut);
+  font-size:14px
+}
+
+.group{
+  margin-bottom:18px
+}
+
+.group label{
+  display:block;
+  margin-bottom:7px;
+  font-size:14px;
+  font-weight:600
+}
+
+.control{
+  width:100%;
+  min-height:50px;
+  padding:12px 14px;
+  border:1px solid var(--bd);
+  border-radius:10px;
+  outline:0;
+  background:#fff
+}
+
+.control:focus{
+  border-color:var(--p);
+  box-shadow:0 0 0 3px rgba(15,91,120,.12)
+}
+
+.btn{
+  border:0;
+  border-radius:11px;
+  min-height:48px;
+  padding:12px 18px;
+  font-weight:700
+}
+
+.primary{
+  width:100%;
+  background:var(--p);
+  color:#fff
+}
+
+.primary:hover{
+  background:var(--pd)
+}
+
+.error-box{
+  margin-top:14px;
+  padding:11px 12px;
+  border-radius:9px;
+  background:var(--errl);
+  color:var(--err);
+  font-size:13px
+}
+
+/* APLICAÇÃO */
+
+#app{
+  min-height:100vh;
+  min-height:100svh
+}
+
+.header{
+  position:sticky;
+  top:0;
+  z-index:100;
+  background:rgba(255,255,255,.88);
+  /* -webkit- é obrigatório: sem o prefixo o Safari do iOS ignora tudo. */
+  -webkit-backdrop-filter:saturate(180%) blur(12px);
+  backdrop-filter:saturate(180%) blur(12px);
+  border-bottom:1px solid var(--hair);
+  /* O padding fica no próprio cabeçalho sticky: o título desce abaixo da
+     notch em vez de ficar por baixo dela. */
+  padding-top:var(--safe-t)
+}
+
+.header-inner,
+.content{
+  width:100%;
+  max-width:1200px;
+  margin:auto;
+  padding-left:calc(16px + var(--safe-l));
+  padding-right:calc(16px + var(--safe-r))
+}
+
+.header-inner{
+  min-height:60px;
+  padding-top:10px;
+  padding-bottom:10px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px
+}
+
+/* Sem min-width:0 o item flex não encolhe e a elipse do título nunca
+   aparece — o nome longo empurrava os botões para fora do ecrã. */
+.header-inner>div{
+  min-width:0
+}
+
+.title{
+  margin:0;
+  font-size:17px;
+  color:var(--pd);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis
+}
+
+.user{
+  margin-top:3px;
+  font-size:12px;
+  color:var(--mut)
+}
+
+.actions{
+  display:flex;
+  gap:8px;
+  /* flex:0 0 auto é obrigatório: sem isto, os 3 botões de cabeçalho
+     (3×44 + 2×8 = 148px) ENCOLHEM o bloco de ações para ~129px e o
+     último botão sai do ecrã em qualquer telemóvel (≤ 430px). O título é
+     que cede espaço, com a elipse. */
+  flex:0 0 auto
+}
+
+.head-btn{
+  width:var(--tap);
+  height:var(--tap);
+  flex:0 0 auto;
+  border:1px solid var(--bd);
+  border-radius:10px;
+  background:#fff;
+  color:var(--pd);
+  font-size:18px;
+  transition:background .15s,border-color .15s
+}
+
+.head-btn:hover{
+  background:var(--pl);
+  border-color:var(--p)
+}
+
+.head-btn:active{
+  transform:scale(.94)
+}
+
+.content{
+  /* padding-bottom folgado: a barra de gestos do Android e o indicador de
+     início do iPhone ficavam por cima do último cartão. */
+  padding:18px 0 calc(35px + var(--safe-b))
+}
+
+/* CARTÃO DE ESTADO */
+
+.card{
+  background:#fff;
+  border:1px solid var(--bd);
+  border-radius:var(--r);
+  box-shadow:var(--shadow);
+  margin-bottom:16px
+}
+
+.status{
+  padding:20px
+}
+
+.status-top{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:10px
+}
+
+.date{
+  color:var(--mut);
+  font-size:13px;
+  margin-bottom:5px
+}
+
+.clock{
+  font-size:32px;
+  font-weight:800;
+  color:var(--pd);
+  font-variant-numeric:tabular-nums;
+  letter-spacing:-.02em
+}
+
+.badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:32px;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:700;
+  white-space:nowrap
+}
+
+.neutral{
+  background:#eef2f4;
+  color:#56656d
+}
+
+.working{
+  background:var(--okl);
+  color:var(--ok)
+}
+
+.break{
+  background:var(--warnl);
+  color:var(--warn)
+}
+
+.finished{
+  background:var(--pl);
+  color:var(--p)
+}
+
+.danger{
+  background:var(--errl);
+  color:var(--err)
+}
+
+/* BOTÕES DE PICAGEM */
+
+.section-title{
+  margin:0 0 12px;
+  font-size:16px;
+  color:var(--pd)
+}
+
+.punch-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-bottom:16px
+}
+
+/* Unica superficie com accao: recebe a cor de destaque para ler
+   primeiro. Os dados acima ficam planos, este botao e que se carrega. */
+.punch{
+  min-height:112px;
+  padding:15px 10px;
+  border:1px solid #bcd4de;
+  border-radius:var(--r);
+  background:#fff;
+  box-shadow:var(--shadow);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  color:var(--pd);
+  text-align:center;
+  transition:transform .12s ease,background-color .15s ease,border-color .15s ease,box-shadow .15s ease
+}
+
+.punch:hover{
+  border-color:var(--p);
+  background:var(--pl)
+}
+
+/* Resposta tactile: no toque o botao afunda e volta. */
+.punch:active{
+  transform:scale(.975)
+}
+
+.punch:focus-visible{
+  outline:0;
+  border-color:var(--p);
+  box-shadow:var(--ring)
+}
+
+.punch:disabled{
+  opacity:.45;
+  cursor:not-allowed
+}
+
+/* O botão que foi tocado continua legível e dimenso enquanto o servidor
+   responde. Os outros ficam esbatidos, para ficar claro qual é que está
+   a ir para o servidor. */
+.punch-pending{
+  opacity:1!important;
+  border-color:var(--p);
+  background:var(--pl);
+  box-shadow:0 0 0 3px rgba(15,91,120,.12)
+}
+
+.punch-pending .icon{
+  animation:pulse 1s ease-in-out infinite
+}
+
+@keyframes pulse{
+  0%,100%{opacity:.45}
+  50%{opacity:1}
+}
+
+/* Confirmação visual da última picagem registada. Volta ao normal sozinha
+   (ver limparConfirmacaoPunch) para o ecrã não ficar marcado para sempre. */
+.punch-done{
+  border-color:var(--ok);
+  background:var(--okl);
+  color:var(--ok)
+}
+
+.punch-done .hint{
+  color:var(--ok);
+  font-weight:700
+}
+
+/* Marca de "carregado sem o overlay": o conteúdo do painel já traz os
+   dados, por isso não se mostra o ecrã preto de carregamento. */
+.painel-silencioso{}
+
+.icon{
+  font-size:26px
+}
+
+.label{
+  font-size:14px;
+  font-weight:750
+}
+
+.hint{
+  font-size:11px;
+  color:var(--mut)
+}
+
+/* TOTAIS */
+
+.info-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:12px;
+  margin-bottom:16px
+}
+
+.info{
+  background:#fff;
+  border:1px solid var(--hair);
+  border-radius:var(--r);
+  padding:15px
+}
+
+.info-label{
+  color:var(--mut);
+  font-size:12px;
+  margin-bottom:6px
+}
+
+.info-value{
+  font-size:20px;
+  font-weight:800;
+  font-variant-numeric:tabular-nums
+}
+
+/* PAINÉIS */
+
+.panel-head{
+  padding:15px 16px;
+  border-bottom:1px solid var(--bd);
+  display:flex;
+  justify-content:space-between
+}
+
+.panel-head h2{
+  margin:0;
+  font-size:15px;
+  color:var(--pd)
+}
+
+.panel-body{
+  padding:16px
+}
+
+/* LISTA PICAGENS */
+
+.punch-list{
+  display:flex;
+  flex-direction:column;
+  gap:8px
+}
+
+.punch-row{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:space-between;
+  align-items:baseline;
+  gap:4px 12px;
+  padding:11px 12px;
+  background:#f8fafb;
+  border-radius:9px
+}
+
+.punch-type{
+  font-size:13px;
+  font-weight:650;
+  min-width:0;
+  overflow-wrap:anywhere
+}
+/* Saída assumida: a hora conta, mas ninguém a picou. Fica a distinção
+   visível — número apagado esconderia que a hora foi presumida. */
+.punch-assumida .punch-time{
+  color:var(--mut);
+  font-style:italic
+}
+
+.punch-badge{
+  display:inline-block;
+  margin-left:6px;
+  padding:1px 7px;
+  border:1px solid var(--warn);
+  border-radius:999px;
+  background:var(--warnl);
+  color:var(--warn);
+  font-size:10px;
+  font-weight:700;
+  font-style:normal;
+  letter-spacing:.02em;
+  vertical-align:middle;
+  cursor:help
+}
+
+.punch-time{
+  font-size:15px;
+  font-weight:800;
+  color:var(--pd);
+  font-variant-numeric:tabular-nums
+}
+
+.empty{
+  text-align:center;
+  padding:20px 8px;
+  color:var(--mut);
+  font-size:13px
+}
+
+/* TOAST */
+
+.toast-wrap{
+  position:fixed;
+  left:50%;
+  bottom:calc(20px + var(--safe-b));
+  z-index:10000;
+  width:calc(100% - 30px);
+  max-width:450px;
+  transform:translateX(-50%);
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  pointer-events:none
+}
+
+.toast{
+  padding:13px 15px;
+  border-radius:11px;
+  box-shadow:0 8px 28px rgba(20,50,65,.18);
+  background:#25343c;
+  color:#fff;
+  font-size:13px;
+  /* animação de entrada: dá presença sem custar nada */
+  animation:toastIn .18s ease-out
+}
+
+@keyframes toastIn{
+  from{opacity:0;transform:translateY(8px)}
+  to{opacity:1;transform:none}
+}
+
+.toast.ok{
+  background:var(--ok)
+}
+
+.toast.err{
+  background:var(--err)
+}
+
+.toast.warn{
+  background:var(--warn)
+}
+
+/* RESPONSIVO */
+
+@media screen and (min-width:700px){
+
+  .content{
+    padding-top:25px;
+    padding-bottom:calc(45px + var(--safe-b))
+  }
+
+  .punch-grid{
+    grid-template-columns:repeat(4,1fr)
+  }
+
+  .info-grid{
+    grid-template-columns:repeat(4,1fr)
+  }
+
+  .punch{
+    min-height:125px
+  }
+}
+
+@media screen and (max-width:420px){
+
+  .login-card{
+    padding:26px 19px 21px
+  }
+
+  .clock{
+    font-size:28px
+  }
+}
+/* PAINEL */
+
+/* NAVEGAÇÃO — 23 separadores. Em ecrã largo quebram em linhas; no telemóvel
+   viram uma faixa horizontal com scroll-snap (uma linha só, conteúdo
+   sempre visível em vez de um bloco que empurra a tabela para baixo). */
+
+.tabs{
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+  margin-bottom:14px;
+  scrollbar-width:none
+}
+
+.tabs::-webkit-scrollbar{
+  display:none
+}
+
+.tab{
+  flex:0 0 auto;
+  border:1px solid var(--bd);
+  background:#fff;
+  border-radius:9px;
+  padding:8px 11px;
+  font-size:12.5px;
+  font-weight:600;
+  color:var(--mut);
+  transition:background .15s,color .15s,border-color .15s
+}
+
+.tab:hover{
+  color:var(--pd);
+  border-color:var(--p)
+}
+
+.tab.active{
+  background:var(--p);
+  border-color:var(--p);
+  color:#fff
+}
+
+.kpis{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:8px;
+  margin-bottom:10px
+}
+
+.kpi{
+  background:#f8fafb;
+  border:1px solid var(--hair);
+  border-radius:9px;
+  padding:9px 11px
+}
+
+.kpi-label{
+  color:var(--mut);
+  font-size:11px;
+  margin-bottom:3px
+}
+
+.kpi-value{
+  font-size:16px;
+  font-weight:800;
+  color:var(--pd);
+  font-variant-numeric:tabular-nums
+}
+
+.toolbar{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-bottom:10px
+}
+
+.table-wrap{
+  overflow-x:auto;
+  /* iOS antigo: sem isto o scroll horizontal fica "laggy" (sem inércia). */
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior-x:contain;
+  /* Continua a ser uma tabela no computador; abaixo de 700px passa a lista
+     (ver @media). O clip impede que a tabela escape do cartão arredondado. */
+  border-radius:var(--r)
+}
+
+.table-wrap table{
+  width:100%;
+  /* min-width em vez de width fixa: a tabela cresce quando as colunas
+     precisam, mas continua a ocupar 100% quando há espaço. */
+  min-width:max-content;
+  border-collapse:collapse;
+  font-size:12.5px
+}
+
+.table-wrap th,
+.table-wrap td{
+  border-bottom:1px solid var(--bd);
+  padding:8px 9px;
+  text-align:left;
+  white-space:nowrap
+}
+
+.table-wrap th{
+  color:var(--mut);
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:.03em
+}
+
+.cell-actions{
+  white-space:nowrap
+}
+
+.mini{
+  border:1px solid var(--bd);
+  background:#fff;
+  border-radius:8px;
+  padding:7px 10px;
+  font-size:12px;
+  font-weight:650;
+  color:var(--pd);
+  transition:background .15s,border-color .15s
+}
+
+.mini:hover{
+  background:var(--pl);
+  border-color:var(--p)
+}
+
+.mini:active{
+  transform:scale(.97)
+}
+
+.mini.danger{
+  color:var(--err);
+  border-color:var(--errl);
+  background:var(--errl)
+}
+
+.mini.ok{
+  color:var(--ok);
+  border-color:var(--okl);
+  background:var(--okl)
+}
+
+.pill{
+  display:inline-block;
+  padding:3px 8px;
+  border-radius:999px;
+  font-size:10.5px;
+  font-weight:750
+}
+
+.pill-mut{background:#eef2f4;color:#56656d}
+.pill-ok{background:var(--okl);color:var(--ok)}
+.pill-warn{background:var(--warnl);color:var(--warn)}
+.pill-err{background:var(--errl);color:var(--err)}
+.pill-info{background:var(--pl);color:var(--p)}
+
+.filters{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  align-items:center
+}
+
+.fitem{
+  font-size:12px;
+  color:var(--mut);
+  display:flex;
+  gap:6px;
+  align-items:center
+}
+
+.fitem input,
+.fitem select{
+  border:1px solid var(--bd);
+  border-radius:8px;
+  padding:7px 9px;
+  font-size:13px;
+  min-height:34px
+}
+
+.detail-kv{
+  display:grid;
+  grid-template-columns:auto 1fr;
+  gap:4px 12px;
+  font-size:13px;
+  margin-bottom:10px
+}
+
+/* valores longos (motivos, emails, URLs) partem a linha em vez de
+   alargar a página */
+.detail-kv>div{
+  min-width:0;
+  overflow-wrap:anywhere
+}
+
+.detail-kv .k{
+  color:var(--mut)
+}
+
+.form-grid .fgroup{
+  margin-bottom:12px
+}
+
+.form-grid label{
+  display:block;
+  margin-bottom:5px;
+  font-size:12.5px;
+  font-weight:600
+}
+
+.form-grid .control{
+  min-height:44px
+}
+
+/* ============================================================
+   CAMADA TÁTIL E DE TELEMÓVEL
+   Ativada por pointer:coarse (ecrã real de toque) ou por largura
+   ( telemóvel em rotação, janela estreita, devtools ). Não depende
+   do dispositivo: é o que o navegador sabe medir.
+   ============================================================ */
+
+/* `screen and` é deliberado: estas regras são de ecã, não de papel.
+   Sem isso, imprimir de um telemóvel (ou de uma janela estreita) herdava a
+   lista e a exportação em PDF saía sem cabeçalhos. */
+@media screen and (pointer:coarse){
+
+  /* iOS/Android fazem zoom automático ao focar um campo com menos de
+     16px e NUNCA voltam sozinhos — 16px em ecrãs táteis resolve. */
+  input,
+  select,
+  textarea,
+  .fitem input,
+  .fitem select{
+    font-size:16px
+  }
+
+  /* WCAG 2.5.5 / Material: alvos de 44px */
+  .tab,
+  .mini,
+  .head-btn{
+    min-height:var(--tap)
+  }
+
+  .head-btn{
+    width:var(--tap)
+  }
+
+  .tab,
+  .mini{
+    padding:11px 14px
+  }
+
+  .btn{
+    min-height:var(--tap)
+  }
+}
+
+@media screen and (max-width:700px){
+
+  /* 23 separadores numa linha só, com scroll e "encaixe" entre botões.
+     O scroll fica DENTRO de .tabs (sem margens negativas): um elemento
+     mais largo que a página faz scroll horizontal de TODO o site, e o
+     dedo a arrastar os separadores acabava a arrastar a página. */
+  .tabs{
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior-x:contain;
+    scroll-snap-type:x proximity;
+    padding:2px 0
+  }
+
+  .tab{
+    scroll-snap-align:start
+  }
+
+  /* TABELAS EM LISTA
+     Uma tabela de 9 colunas num ecrã de 390px obriga a arrastar na
+     horizontal e perde-se de vista a que coluna pertence o valor.
+     Abaixo de 700px cada linha vira um cartão "rótulo: valor" usando
+     o data-label que o JS escreve em cada célula. A tabela continua a ser
+     a marcação (exportação/PDF/impressão e leitores de ecrã mantêm-se),
+     só a apresentação muda. */
+  .table-wrap table,
+  .table-wrap tbody,
+  .table-wrap tr,
+  .table-wrap td{
+    display:block;
+    width:auto;
+    min-width:0
+  }
+
+  .table-wrap thead{
+    display:none
+  }
+
+  .table-wrap tr{
+    border:1px solid var(--bd);
+    border-radius:10px;
+    margin-bottom:10px;
+    padding:4px 10px;
+    background:#fff
+  }
+
+  .table-wrap td{
+    border-bottom:1px solid #eef2f4;
+    padding:8px 0;
+    white-space:normal;
+    overflow-wrap:anywhere;
+    display:flex;
+    gap:12px;
+    justify-content:space-between;
+    align-items:baseline;
+    text-align:right
+  }
+
+  .table-wrap tr td:last-child{
+    border-bottom:0
+  }
+
+  .table-wrap td::before{
+    content:attr(data-label);
+    flex:0 0 auto;
+    max-width:46%;
+    text-align:left;
+    color:var(--mut);
+    font-size:11px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.03em
+  }
+
+  /* botões de ação: largura total, alvos grandes */
+  .table-wrap td.cell-actions{
+    justify-content:flex-end;
+    flex-wrap:wrap;
+    gap:6px
+  }
+
+  .table-wrap td.cell-actions::before{
+    content:none
+  }
+
+  .table-wrap td.cell-actions .mini{
+    flex:1 1 auto;
+    min-height:var(--tap)
+  }
+
+  /* KPIs e filtros ocupam a largura toda */
+  .kpis{grid-template-columns:1fr 1fr}
+
+  .filters{flex-direction:column;align-items:stretch}
+
+  .fitem{
+    justify-content:space-between
+  }
+
+  .fitem input,
+  .fitem select{
+    flex:1 1 auto;
+    max-width:65%
+  }
+
+  .fitem .mini{
+    align-self:flex-end
+  }
+}
+
+/* Ecrãs muito estreitos (iPhone SE 375px, Galaxy S8 360px em modo
+   pequeno, janelas redimensionadas): uma coluna de KPIs, marca menor. */
+@media screen and (max-width:380px){
+
+  .kpis{grid-template-columns:1fr}
+
+  .clock{font-size:26px}
+
+  .login-card{padding:22px 16px 18px}
+
+  .brand-icon{width:60px;height:60px;font-size:21px;border-radius:17px}
+}
+
+/* AVISO NO SEPARADOR (dia que nao foi possivel calcular) */
+
+.muted{
+  color:var(--mut)
+}
+
+/* Aviso informativo (há coisas por tratar) — mesma forma do .alert-inline,
+   mas com os tons de aviso e não de erro: um pedido de correção à espera
+   não é uma falha, é uma coisa a resolver. */
+.aviso{
+  margin:0 0 14px;
+  padding:11px 13px;
+  border:1px solid var(--warnl);
+  border-left:4px solid var(--warn);
+  border-radius:9px;
+  background:var(--warnl);
+  color:var(--warn);
+  font-size:12.5px;
+  line-height:1.45
+}
+
+.alert-inline{
+  margin:0 0 14px;
+  padding:11px 13px;
+  border:1px solid var(--errl);
+  border-left:4px solid var(--err);
+  border-radius:9px;
+  background:var(--errl);
+  color:var(--err);
+  font-size:12.5px;
+  line-height:1.45
+}
+
+.pill-err{
+  background:var(--errl);
+  color:var(--err)
+}
+
+/* EXPORTAÇÃO — barra de botões por tabela */
+
+.toolbar-export{
+  margin-top:-4px
+}
+
+/* IMPRESSÃO / PDF — imprime apenas a tabela exportada */
+
+#printArea{
+  display:none
+}
+
+@media print{
+
+  /* O ecra de impressão é estreito como um telemóvel, mas as regras
+     "tabela vira lista" são para o ecrã. Sem este reset, o PDF saía
+     como uma coluna de rótulos em vez de tabela. */
+  .table-wrap table,
+  .table-wrap tbody,
+  .table-wrap tr,
+  .table-wrap td{
+    display:table-cell;
+    width:auto;
+    white-space:normal
+  }
+
+  .table-wrap table,
+  .table-wrap tbody{
+    display:table
+  }
+
+  .table-wrap tr{
+    display:table-row;
+    border:0;
+    border-radius:0;
+    margin:0;
+    padding:0;
+    background:none
+  }
+
+  .table-wrap thead{
+    display:table-header-group
+  }
+
+  .table-wrap td{
+    display:table-cell;
+    text-align:left;
+    border-bottom:1px solid #888;
+    padding:2px 4px
+  }
+
+  .table-wrap td::before{
+    content:none
+  }
+
+  .table-wrap{
+    overflow:visible
+  }
+
+  body.a-imprimir #app,
+  body.a-imprimir #panel,
+  body.a-imprimir #loading,
+  body.a-imprimir #toastWrap{
+    display:none!important
+  }
+
+  body.a-imprimir #printArea{
+    display:block!important;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    color:#000
+  }
+
+  body.a-imprimir #printArea h1{
+    font-size:15px;
+    margin:0 0 2px
+  }
+
+  body.a-imprimir #printArea .print-sub{
+    font-size:10px;
+    color:#333;
+    margin-bottom:8px
+  }
+
+  body.a-imprimir #printArea table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:10px
+  }
+
+  body.a-imprimir #printArea th,
+  body.a-imprimir #printArea td{
+    border:1px solid #888;
+    padding:2px 4px;
+    text-align:left;
+    vertical-align:top
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div id="loading">
+  <div class="loading-card">
+    <div class="spinner"></div>
+    <div id="loadingText">A carregar...</div>
+  </div>
+</div>
+
+
+<!-- =========================================================
+     LOGIN
+     ========================================================= -->
+
+<section id="login" class="hidden">
+
+  <div class="login-card">
+
+    <div class="brand">
+
+      <div class="brand-icon">
+        CVF
+      </div>
+
+      <h1>
+        Sistema de Picagem de Ponto
+      </h1>
+
+      <p>
+        Centro Veterinário de Febres
+      </p>
+
+    </div>
+
+    <form id="loginForm">
+
+      <div class="group">
+
+        <label for="email">
+          Utilizador / Email
+        </label>
+
+        <input
+          id="email"
+          class="control"
+          type="text"
+          autocomplete="username"
+          autocapitalize="none"
+          spellcheck="false"
+          required
+        >
+
+      </div>
+
+      <div class="group">
+
+        <label for="password">
+          Palavra-passe
+        </label>
+
+        <input
+          id="password"
+          class="control"
+          type="password"
+          autocomplete="current-password"
+          autocapitalize="none"
+          autocorrect="off"
+          spellcheck="false"
+          required
+        >
+
+      </div>
+
+      <button
+        id="loginBtn"
+        class="btn primary"
+        type="submit"
+      >
+        Entrar
+      </button>
+
+      <div
+        id="loginError"
+        class="error-box hidden"
+      ></div>
+
+    </form>
+
+  </div>
+
+</section>
+<!-- =========================================================
+     APLICAÇÃO
+     ========================================================= -->
+
+<section id="app" class="hidden">
+
+  <header class="header">
+
+    <div class="header-inner">
+
+      <div>
+
+        <h1 class="title">
+          Sistema de Picagem
+        </h1>
+
+        <div
+          id="headerUser"
+          class="user"
+        >
+          -
+        </div>
+
+      </div>
+
+      <div class="actions">
+
+        <button
+          id="panelBtn"
+          class="head-btn"
+          type="button"
+          title="Painel"
+        >
+          ☰
+        </button>
+
+        <button
+          id="refreshBtn"
+          class="head-btn"
+          type="button"
+          title="Atualizar"
+        >
+          ↻
+        </button>
+
+        <button
+          id="logoutBtn"
+          class="head-btn"
+          type="button"
+          title="Terminar sessão"
+        >
+          ⎋
+        </button>
+
+      </div>
+
+    </div>
+
+  </header>
+
+
+  <main class="content">
+
+    <!-- ESTADO -->
+
+    <section class="card status">
+
+      <div class="status-top">
+
+        <div>
+
+          <div
+            id="date"
+            class="date"
+          >
+            -
+          </div>
+
+          <div
+            id="clock"
+            class="clock"
+          >
+            --:--:--
+          </div>
+
+        </div>
+
+        <div
+          id="status"
+          class="badge neutral"
+        >
+          A carregar
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- PICAGENS -->
+
+    <h2 class="section-title">
+      Registo de ponto
+    </h2>
+
+    <section class="punch-grid">
+
+      <button
+        class="punch"
+        data-type="ENTRADA_MANHA"
+        type="button"
+      >
+        <span class="icon">▶</span>
+        <span class="label">Entrada Manhã</span>
+        <span class="hint">Início do período</span>
+      </button>
+
+      <button
+        class="punch"
+        data-type="SAIDA_MANHA"
+        type="button"
+      >
+        <span class="icon">◀</span>
+        <span class="label">Saída Manhã</span>
+        <span class="hint">Fim do período</span>
+      </button>
+
+      <button
+        class="punch"
+        data-type="ENTRADA_TARDE"
+        type="button"
+      >
+        <span class="icon">▶</span>
+        <span class="label">Entrada Tarde</span>
+        <span class="hint">Início da tarde</span>
+      </button>
+
+      <button
+        class="punch"
+        data-type="SAIDA_TARDE"
+        type="button"
+      >
+        <span class="icon">◀</span>
+        <span class="label">Saída Tarde</span>
+        <span class="hint">Fim do dia</span>
+      </button>
+
+    </section>
+
+
+    <!-- TOTAIS -->
+
+    <section class="info-grid">
+
+      <div class="info">
+
+        <div class="info-label">
+          Horas planeadas
+        </div>
+
+        <div
+          id="planned"
+          class="info-value"
+        >
+          00:00
+        </div>
+
+      </div>
+
+
+      <div class="info">
+
+        <div class="info-label">
+          Horas trabalhadas
+        </div>
+
+        <div
+          id="worked"
+          class="info-value"
+        >
+          00:00
+        </div>
+
+      </div>
+
+
+      <div class="info">
+
+        <div class="info-label">
+          Horas normais
+        </div>
+
+        <div
+          id="normal"
+          class="info-value"
+        >
+          00:00
+        </div>
+
+      </div>
+
+
+      <div class="info">
+
+        <div class="info-label">
+          Horas extra
+        </div>
+
+        <div
+          id="extra"
+          class="info-value"
+        >
+          00:00
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- PICAGENS DO DIA -->
+
+    <section class="card">
+
+      <div class="panel-head">
+        <h2>
+          Picagens de hoje
+        </h2>
+      </div>
+
+      <div class="panel-body">
+
+        <div
+          id="punchList"
+          class="punch-list"
+        >
+          <div class="empty">
+            Ainda não existem picagens.
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- RESUMO -->
+
+    <section class="card">
+
+      <div class="panel-head">
+        <h2>
+          Resumo do dia
+        </h2>
+      </div>
+
+      <div class="panel-body">
+
+        <div
+          id="summary"
+          class="empty"
+        >
+          A carregar...
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+</section>
+
+
+<!-- =========================================================
+     PAINEL — GESTÃO (ADMIN) + DADOS DO COLABORADOR
+     ========================================================= -->
+
+<section id="panel" class="hidden">
+
+  <header class="header">
+
+    <div class="header-inner">
+
+      <div>
+
+        <h1 class="title">
+          Painel
+        </h1>
+
+        <div
+          id="panelUser"
+          class="user"
+        >
+          -
+        </div>
+
+      </div>
+
+      <div class="actions">
+
+        <button
+          id="panelBackBtn"
+          class="head-btn"
+          type="button"
+          title="Voltar ao ponto"
+        >
+          ↩
+        </button>
+
+        <button
+          id="panelLogoutBtn"
+          class="head-btn"
+          type="button"
+          title="Terminar sessão"
+        >
+          ⎋
+        </button>
+
+      </div>
+
+    </div>
+
+  </header>
+
+
+  <main class="content">
+
+    <nav
+      id="panelTabs"
+      class="tabs"
+    ></nav>
+
+    <section class="card">
+
+      <div class="panel-head">
+
+        <h2 id="panelTitle">
+          -
+        </h2>
+
+        <div
+          id="panelFilters"
+          class="filters"
+        ></div>
+
+      </div>
+
+      <div class="panel-body">
+
+        <div id="panelTable"></div>
+
+      </div>
+
+    </section>
+
+    <section
+      id="detailCard"
+      class="card hidden"
+    >
+
+      <div class="panel-head">
+
+        <h2 id="detailTitle">
+          Detalhe
+        </h2>
+
+        <button
+          id="detailClose"
+          class="head-btn"
+          type="button"
+        >
+          ×
+        </button>
+
+      </div>
+
+      <div class="panel-body">
+
+        <div id="panelDetail"></div>
+
+      </div>
+
+    </section>
+
+    <section
+      id="formCard"
+      class="card hidden"
+    >
+
+      <div class="panel-head">
+
+        <h2 id="formTitle">
+          Formulário
+        </h2>
+
+        <button
+          id="formClose"
+          class="head-btn"
+          type="button"
+        >
+          ×
+        </button>
+
+      </div>
+
+      <div class="panel-body">
+
+        <form
+          id="panelForm"
+          class="form-grid"
+        ></form>
+
+      </div>
+
+    </section>
+
+  </main>
+
+</section>
+
+
+<div id="printArea"></div>
+
+<div
+  id="toastWrap"
+  class="toast-wrap"
+></div>
+
+<script>
+'use strict';
+
+/* =========================================================
+   ESTADO GLOBAL
+   ========================================================= */
+
+const S = {
+  token: null,
+  user: null,
+  day: null,
+  busy: false,
+  punching: false,
+  clockTimer: null,
+  refreshTimer: null
+};
+
+
+/* =========================================================
+   HELPERS DOM
+   ========================================================= */
+
+const $ = id =>
+  document.getElementById(id);
+
+
+function show(id) {
+  $(id).classList.remove('hidden');
+}
+
+
+function hide(id) {
+  $(id).classList.add('hidden');
+}
+
+
+function safe(value) {
+
+  return value == null
+    ? ''
+    : String(value);
+}
+
+
+/* =========================================================
+   SEGURANÇA HTML
+   ========================================================= */
+
+function esc(value) {
+
+  return safe(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+
+/* =========================================================
+   LOADING
+   ========================================================= */
+
+function load(message) {
+
+  $('loadingText').textContent =
+    message || 'A carregar...';
+
+  show('loading');
+}
+
+
+function unload() {
+  hide('loading');
+}
+
+
+/* =========================================================
+   NOTIFICAÇÕES
+   ========================================================= */
+
+function toast(
+  message,
+  type = ''
+) {
+
+  const element =
+    document.createElement('div');
+
+  element.className =
+    'toast ' + type;
+
+  element.textContent =
+    safe(message);
+
+  $('toastWrap')
+    .appendChild(element);
+
+  window.setTimeout(
+    () => element.remove(),
+    3500
+  );
+}
+
+
+/* =========================================================
+   MINUTOS
+   ========================================================= */
+
+function mins(value) {
+
+  let number =
+    Math.round(
+      Number(value) || 0
+    );
+
+  const signal =
+    number < 0 ? '-' : '';
+
+  const absolute =
+    Math.abs(number);
+
+  return (
+    signal +
+    String(
+      Math.floor(
+        absolute / 60
+      )
+    ).padStart(2, '0') +
+    ':' +
+    String(
+      absolute % 60
+    ).padStart(2, '0')
+  );
+}
+/* =========================================================
+   FORMATAÇÃO DE HORA
+   ========================================================= */
+
+function dateTime(value) {
+
+  if (!value) {
+    return '-';
+  }
+
+  const date =
+    new Date(value);
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+    return safe(value);
+  }
+
+  return new Intl.DateTimeFormat(
+    'pt-PT',
+    {
+      timeZone: 'Europe/Lisbon',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }
+  ).format(date);
+}
+
+
+function time(value) {
+
+  if (!value) {
+    return '-';
+  }
+
+  const date =
+    new Date(value);
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+    return safe(value);
+  }
+
+  return new Intl.DateTimeFormat(
+    'pt-PT',
+    {
+      timeZone: 'Europe/Lisbon',
+      hour: '2-digit',
+      minute: '2-digit'
+    }
+  ).format(date);
+}
+
+
+/* =========================================================
+   RELÓGIO
+   ========================================================= */
+
+function clock() {
+
+  const date =
+    new Date();
+
+  $('clock').textContent =
+    new Intl.DateTimeFormat(
+      'pt-PT',
+      {
+        timeZone: 'Europe/Lisbon',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      }
+    ).format(date);
+
+  $('date').textContent =
+    new Intl.DateTimeFormat(
+      'pt-PT',
+      {
+        timeZone: 'Europe/Lisbon',
+        weekday: 'long',
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
+      }
+    ).format(date);
+}
+
+
+function startClock() {
+
+  clearInterval(
+    S.clockTimer
+  );
+
+  clock();
+
+  S.clockTimer =
+    setInterval(
+      clock,
+      1000
+    );
+}
+
+
+/* =========================================================
+   ERROS
+   ========================================================= */
+
+function serverError(
+  error,
+  context
+) {
+
+  console.error(
+    context,
+    error
+  );
+
+  const message =
+    error &&
+    error.message
+      ? error.message
+      : safe(error) ||
+        'Ocorreu um erro inesperado.';
+
+  if (
+    /sessão|expirada|terminada|autenticação/i
+      .test(message)
+  ) {
+
+    sessionExpired();
+
+    return;
+  }
+
+  toast(
+    message,
+    'err'
+  );
+}
+
+
+/* =========================================================
+   SESSÃO EXPIRADA
+   ========================================================= */
+
+function sessionExpired() {
+
+  S.token = null;
+  S.user = null;
+  S.day = null;
+
+  stopRefresh();
+
+  hide('panel');
+  hide('app');
+  show('login');
+
+  $('password').value = '';
+
+  $('email').focus();
+
+  toast(
+    'A sessão terminou. Faça novamente o login.',
+    'warn'
+  );
+}
+
+
+/* =========================================================
+   LOGIN ERROR
+   ========================================================= */
+
+function setLoginError(
+  message
+) {
+
+  $('loginError').textContent =
+    safe(message);
+
+  show('loginError');
+}
+
+
+function clearLoginError() {
+
+  hide('loginError');
+
+  $('loginError').textContent =
+    '';
+}
+
+
+/* =========================================================
+   UTILIZADOR
+   ========================================================= */
+
+function renderUser() {
+
+  const user =
+    S.user || {};
+
+  $('headerUser').textContent =
+    [
+      user.Nome || user.nome,
+      user.Profissao || user.profissao,
+      user.Perfil || user.perfil
+    ]
+    .filter(Boolean)
+    .join(' · ');
+}
+/* =========================================================
+   REFRESH
+   ========================================================= */
+
+function stopRefresh() {
+
+  if (S.refreshTimer) {
+
+    clearInterval(
+      S.refreshTimer
+    );
+
+    S.refreshTimer =
+      null;
+  }
+}
+
+
+function startRefresh() {
+
+  stopRefresh();
+
+  S.refreshTimer =
+    setInterval(
+      function() {
+
+        if (
+          S.token &&
+          !S.busy &&
+          !S.punching
+        ) {
+
+          loadDay(false);
+        }
+
+      },
+      30000
+    );
+}
+
+
+/* =========================================================
+   CHAMADA BACKEND
+   ========================================================= */
+
+function backend(
+  functionName,
+  argumentsList,
+  success,
+  failure
+) {
+
+  google.script.run
+    .withSuccessHandler(
+      success
+    )
+    .withFailureHandler(
+      function(error) {
+
+        failure(
+          error,
+          functionName
+        );
+
+      }
+    )[functionName](
+      ...argumentsList
+    );
+}
+
+
+/* =========================================================
+   LOGIN
+   ========================================================= */
+
+function login() {
+
+  if (S.busy) {
+    return;
+  }
+
+  const email =
+    $('email')
+      .value
+      .trim();
+
+  const password =
+    $('password').value;
+
+  if (!email) {
+
+    setLoginError(
+      'Introduza o utilizador.'
+    );
+
+    return;
+  }
+
+  if (!password) {
+
+    setLoginError(
+      'Introduza a palavra-passe.'
+    );
+
+    return;
+  }
+
+  S.busy = true;
+
+  clearLoginError();
+
+  $('loginBtn').disabled =
+    true;
+
+  load(
+    'A autenticar...'
+  );
+
+  backend(
+    'autenticarUtilizador',
+    [
+      email,
+      password
+    ],
+
+    function(result) {
+
+      S.busy = false;
+
+      $('loginBtn').disabled =
+        false;
+
+      unload();
+
+      if (
+        !result ||
+        !result.sucesso
+      ) {
+
+        setLoginError(
+          result &&
+          result.mensagem
+            ? result.mensagem
+            : 'Credenciais inválidas.'
+        );
+
+        return;
+      }
+
+      S.token =
+        result.token;
+
+      /* O servidor é quem sabe em que dia a semana começa (Config.gs). Sem
+         isto a interface assumia sempre segunda-feira e podia pedir um
+         intervalo diferente do que o backend considera semana. */
+      if (
+        typeof result.primeiroDiaSemana === 'number' &&
+        result.primeiroDiaSemana >= 0 &&
+        result.primeiroDiaSemana <= 6
+      ) {
+        primeiroDiaSemana = result.primeiroDiaSemana;
+      }
+
+      S.user =
+        result.utilizador || null;
+
+      $('password').value =
+        '';
+
+      hide('login');
+      show('app');
+
+      renderUser();
+
+      syncPanelAccess(result);
+
+      startRefresh();
+
+      loadDay(false);
+
+      toast(
+        'Sessão iniciada.',
+        'ok'
+      );
+    },
+
+    function(error) {
+
+      S.busy = false;
+
+      $('loginBtn').disabled =
+        false;
+
+      unload();
+
+      /* O erro de login TEM de aparecer no formulário: um toast que
+         desaparece em 3,5 s parece "não fez nada" e convida a repetir
+         — cinco tentativas seguidas bloqueiam a conta. */
+      setLoginError(
+        error && error.message
+          ? error.message
+          : 'Não foi possível iniciar sessão.'
+      );
+    }
+  );
+}
+/* =========================================================
+   LOGOUT
+   ========================================================= */
+
+function logout() {
+
+  if (
+    !S.token ||
+    S.busy
+  ) {
+    return;
+  }
+
+  S.busy = true;
+
+  load(
+    'A terminar sessão...'
+  );
+
+  backend(
+    'terminarSessao',
+    [S.token],
+
+    function() {
+
+      S.busy = false;
+
+      unload();
+
+      S.token = null;
+      S.user = null;
+      S.day = null;
+
+      stopRefresh();
+
+      hide('panel');
+      hide('app');
+      show('login');
+
+      $('email').value =
+        '';
+
+      $('password').value =
+        '';
+
+      $('email').focus();
+
+      toast(
+        'Sessão terminada.',
+        'ok'
+      );
+    },
+
+    function(error) {
+
+      S.busy = false;
+
+      unload();
+
+      serverError(
+        error,
+        'logout'
+      );
+    }
+  );
+}
+
+
+/* =========================================================
+   CARREGAR DIA
+   ========================================================= */
+
+function loadDay(
+  feedback
+) {
+
+  if (
+    !S.token ||
+    S.busy
+  ) {
+    return;
+  }
+
+  S.busy = true;
+
+  if (feedback) {
+
+    toast(
+      'A atualizar...'
+    );
+  }
+
+  backend(
+  'calcularMeuDia',
+  [
+    S.token,
+    new Date().toISOString()
+  ],
+
+    function(result) {
+
+      S.busy = false;
+
+      if (!result) {
+
+        sessionExpired();
+
+        return;
+      }
+
+      S.day =
+        result;
+
+      renderDay();
+    },
+
+    function(error) {
+
+      S.busy = false;
+
+      serverError(
+        error,
+        'calcularMeuDia'
+      );
+    }
+  );
+}
+
+
+/* =========================================================
+   RENDERIZAÇÃO DO DIA
+   ========================================================= */
+
+function renderDay() {
+
+  const day =
+    S.day || {};
+
+  $('planned').textContent =
+    mins(
+      day.minutosPlaneados
+    );
+
+  $('worked').textContent =
+    mins(
+      day.minutosTrabalhados
+    );
+
+  $('normal').textContent =
+    mins(
+      day.minutosNormais
+    );
+
+  $('extra').textContent =
+    mins(
+      day.minutosExtra
+    );
+
+  renderStatus(day);
+  renderPunches(day);
+  renderSummary(day);
+}
+/* =========================================================
+   ESTADO
+   ========================================================= */
+
+function renderStatus(
+  day
+) {
+
+  const state =
+    safe(
+      day.estado
+    ).toUpperCase();
+
+  const punches =
+    Array.isArray(
+      day.picagens
+    )
+      ? day.picagens
+      : [];
+
+  let text =
+    'Sem picagens';
+
+  let className =
+    'neutral';
+
+  /* Estados realmente devolvidos pelo motor no backend.
+     Antes procurava CONCLUIDO/COMPLETO, que determinarEstadoDia_
+     nunca devolve — o badge "Dia concluído" nunca aparecia. */
+  const STATES = {
+
+    INCOMPLETO:
+      { text: 'Incompleto', className: 'danger' },
+
+    SEM_PICAGENS:
+      { text: 'Sem picagens', className: 'neutral' },
+
+    SEM_PICAGEM:
+      { text: 'Sem picagens', className: 'neutral' },
+
+    SEM_HORARIO_NORMAL:
+      { text: 'Sem horário normal', className: 'neutral' },
+
+    SEM_HORAS:
+      { text: 'Sem horas', className: 'neutral' },
+
+    COM_EXTRA:
+      { text: 'Concluído com extra', className: 'finished' },
+
+    TRABALHADO:
+      { text: 'Dia concluído', className: 'finished' },
+
+    A_TRABALHAR:
+      { text: 'A trabalhar', className: 'working' },
+
+    INTERVALO:
+      { text: 'Intervalo', className: 'break' },
+
+    TERMINOU:
+      { text: 'Terminou', className: 'finished' },
+
+    REGISTADO:
+      { text: 'Registado', className: 'neutral' }
+  };
+
+  const mapped =
+    STATES[state];
+
+  if (mapped) {
+
+    text =
+      mapped.text;
+
+    className =
+      mapped.className;
+
+  }
+  else if (
+    punches.length === 1 ||
+    punches.length === 3
+  ) {
+
+    text =
+      'A trabalhar';
+
+    className =
+      'working';
+
+  }
+  else if (
+    punches.length === 2
+  ) {
+
+    text =
+      'Intervalo';
+
+    className =
+      'break';
+  }
+
+  $('status').textContent =
+    text;
+
+  $('status').className =
+    'badge ' + className;
+}
+
+
+/* =========================================================
+   PICAGENS
+   ========================================================= */
+
+function renderPunches(
+  day
+) {
+
+  const list =
+    $('punchList');
+
+  list.innerHTML =
+    '';
+
+  const punches =
+    Array.isArray(
+      day.picagens
+    )
+      ? day.picagens
+      : [];
+
+  const names = {
+
+    ENTRADA_MANHA:
+      'Entrada Manhã',
+
+    SAIDA_MANHA:
+      'Saída Manhã',
+
+    ENTRADA_TARDE:
+      'Entrada Tarde',
+
+    SAIDA_TARDE:
+      'Saída Tarde'
+  };
+
+  if (!punches.length) {
+
+    list.innerHTML =
+      '<div class="empty">' +
+      'Ainda não existem picagens.' +
+      '</div>';
+
+    return;
+  }
+
+  punches.forEach(
+    function(punch) {
+
+      const row =
+        document.createElement(
+          'div'
+        );
+
+      row.className =
+        'punch-row' +
+        (punch.saidaAssumida ?
+          ' punch-assumida' :
+          '');
+
+      const type =
+        punch.TipoPicagem ||
+        punch.tipo ||
+        punch.Tipo ||
+        '';
+
+      const date =
+        punch.DataHora ||
+        punch.dataHora ||
+        punch.Timestamp ||
+        punch.timestamp ||
+        '';
+
+      /* Uma saída assumida NÃO é uma hora que a pessoa picou. Sem esta
+         marca, a pessoa via "Saída Manhã 13:00" e perguntava porque é
+         que nunca a viu marcar. Mostra-se o valor e avisa-se de onde
+         veio — os números continuam a contar para wages. */
+      row.innerHTML =
+        '<div class="punch-type">' +
+        esc(
+          names[type] ||
+          type ||
+          'Picagem'
+        ) +
+        (punch.saidaAssumida ?
+          '<span class="punch-badge" title="Saída assumida automaticamente no fim do turno normal, porque não foi marcada.">' +
+          ' assumida</span>' :
+          '') +
+        '</div>' +
+
+        '<div class="punch-time">' +
+        esc(
+          time(date)
+        ) +
+        '</div>';
+
+      list.appendChild(
+        row
+      );
+    }
+  );
+}
+/* =========================================================
+   RESUMO
+   ========================================================= */
+
+/* Converte o horário normal devolvido pelo motor
+   (array de {inicio,fim}) em texto legível:
+   "10:00–13:00 · 14:30–19:00". */
+function formatarHorario(
+  value
+) {
+
+  if (!value) {
+    return '—';
+  }
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (
+    !Array.isArray(value) ||
+    !value.length
+  ) {
+    return 'Sem horário normal';
+  }
+
+  return value
+    .map(
+      function (bloco) {
+
+        const inicio =
+          bloco &&
+          (bloco.inicio || bloco.Inicio);
+
+        const fim =
+          bloco &&
+          (bloco.fim || bloco.Fim);
+
+        if (!inicio || !fim) {
+          return '';
+        }
+
+        return inicio + '–' + fim;
+      }
+    )
+    .filter(Boolean)
+    .join(' · ');
+}
+
+function renderSummary(
+  day
+) {
+
+  const type =
+    day.tipoDia || '-';
+
+  const schedule =
+    formatarHorario(
+      day.horarioNormal
+    );
+
+  const state =
+    day.estado || '-';
+
+  const approved =
+    day.horasExtraAprovadas ||
+    mins(
+      day.extraAprovado || 0
+    );
+
+  const exceptions =
+    Array.isArray(
+      day.excecoes
+    )
+      ? day.excecoes
+      : [];
+
+  let html =
+    '<div style="text-align:left;line-height:1.8">';
+
+  html +=
+    '<div>' +
+    '<strong>Tipo de dia:</strong> ' +
+    esc(type) +
+    '</div>';
+
+  html +=
+    '<div>' +
+    '<strong>Horário normal:</strong> ' +
+    esc(schedule) +
+    '</div>';
+
+  html +=
+    '<div>' +
+    '<strong>Estado:</strong> ' +
+    esc(state) +
+    '</div>';
+
+  html +=
+    '<div>' +
+    '<strong>Extra aprovada:</strong> ' +
+    esc(approved) +
+    '</div>';
+
+  if (exceptions.length) {
+
+    html +=
+      '<div style="margin-top:8px">' +
+      '<strong>Exceções:</strong>' +
+      '</div>';
+
+    html +=
+      '<ul style="margin:4px 0 0;padding-left:20px">';
+
+    exceptions.forEach(
+      function(exception) {
+
+        const value =
+          typeof exception === 'string'
+            ? exception
+            : (
+              exception.codigo ||
+              exception.Codigo ||
+              exception.descricao ||
+              exception.Descricao ||
+              JSON.stringify(exception)
+            );
+
+        html +=
+          '<li>' +
+          esc(value) +
+          '</li>';
+      }
+    );
+
+    html +=
+      '</ul>';
+  }
+
+  html +=
+    '</div>';
+
+  $('summary').innerHTML =
+    html;
+}
+
+
+/* =========================================================
+   REGISTAR PICAGEM
+   ========================================================= */
+
+function punch(
+  type,
+  botao
+) {
+
+  if (
+    S.punching ||
+    !S.token
+  ) {
+    return;
+  }
+
+  const names = {
+
+    ENTRADA_MANHA:
+      'Entrada Manhã',
+
+    SAIDA_MANHA:
+      'Saída Manhã',
+
+    ENTRADA_TARDE:
+      'Entrada Tarde',
+
+    SAIDA_TARDE:
+      'Saída Tarde'
+  };
+
+  if (
+    !window.confirm(
+      'Registar "' +
+      (
+        names[type] ||
+        type
+      ) +
+      '" agora?'
+    )
+  ) {
+    return;
+  }
+
+  S.punching = true;
+
+  /* O ecrã inteiro ficava coberto por um overlay "A registar picagem..."
+     durante a ida e volta ao servidor — 1 a 2 segundos em que o
+     utilizador via um modal cinzento e não podia ler o relógio, as
+     horas nem o estado. Numa app de picagem isso parece uma falha.
+     Agora só o botão tocado mostra "A registar..." e o resto do ecrã
+     continua legível e utilizável. */
+  pintarPunch(
+    botao,
+    'pending'
+  );
+
+  document
+    .querySelectorAll('.punch')
+    .forEach(
+      function(button) {
+        button.disabled = true;
+      }
+    );
+
+  backend(
+    'registarPicagem',
+    [
+      S.token,
+      type,
+      {}
+    ],
+
+    function(result) {
+
+      S.punching = false;
+
+      document
+        .querySelectorAll('.punch')
+        .forEach(
+          function(button) {
+            button.disabled = false;
+            pintarPunch(
+              button,
+              'idle'
+            );
+          }
+        );
+
+      if (
+        !result ||
+        !result.sucesso
+      ) {
+
+        toast(
+          result &&
+          result.mensagem
+            ? result.mensagem
+            : 'A picagem não foi registada.',
+          'err'
+        );
+
+        return;
+      }
+
+      /* A hora real vem do servidor (fuso e segundo certainos), por isso
+         só se marca o botão como feito quando o dia volta carregado. */
+      loadDay(false);
+    },
+
+    function(error) {
+
+      S.punching = false;
+
+      document
+        .querySelectorAll('.punch')
+        .forEach(
+          function(button) {
+            button.disabled = false;
+            pintarPunch(
+              button,
+              'idle'
+            );
+          }
+        );
+
+      serverError(
+        error,
+        'registarPicagem'
+      );
+    }
+  );
+}
+
+/* Estado visual de um botão de picagem, sem mexer no texto original:
+   guarda-o em data-label para poder voltar atrás. */
+function pintarPunch(
+  botao,
+  estado
+) {
+
+  if (!botao) {
+    return;
+  }
+
+  const icone =
+    botao.querySelector('.icon');
+
+  const legenda =
+    botao.querySelector('.hint');
+
+  if (estado === 'pending') {
+
+    botao.dataset.label = icone.textContent;
+
+    icone.textContent = '…';
+    legenda.textContent = 'A registar...';
+    botao.classList.add('punch-pending');
+
+    return;
+  }
+
+  botao.classList.remove(
+    'punch-pending',
+    'punch-done'
+  );
+
+  if (botao.dataset.label) {
+
+    icone.textContent = botao.dataset.label;
+
+  }
+
+  /* O hint original é reconstruído a partir do rótulo do botão para não
+     se perder quando o estado se repete. */
+  const nomes = {
+    ENTRADA_MANHA: 'Início do período',
+    SAIDA_MANHA: 'Fim do período',
+    ENTRADA_TARDE: 'Início da tarde',
+    SAIDA_TARDE: 'Fim do dia'
+  };
+
+  legenda.textContent =
+    nomes[botao.dataset.type] || '';
+}
+/* =========================================================
+   PAINEL — ADMIN + DADOS DO COLABORADOR
+   ========================================================= */
+
+S.panelTab = null;
+S.panelCache = {};
+S.formHandler = null;
+
+function callBackend(nome, args) {
+  const lista = args || [];
+  return new Promise(function (resolve, reject) {
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(reject)
+      [nome].apply(null, lista);
+  });
+}
+
+function api(nome) {
+  const rest = Array.prototype.slice.call(arguments, 1);
+  return callBackend(nome, [S.token].concat(rest));
+}
+
+function $all(seletor) {
+  return Array.prototype.slice.call(
+    document.querySelectorAll(seletor)
+  );
+}
+
+function isAdmin() {
+  const p = S.user
+    ? (S.user.perfil || S.user.Perfil || '')
+    : '';
+  return String(p).toUpperCase() === 'ADMIN';
+}
+
+function pill(estado) {
+  const e = safe(estado).toUpperCase();
+  let cls = 'pill-mut';
+  if (
+    e === 'APROVADO' || e === 'APROVADA' ||
+    e === 'RESOLVIDA' || e === 'ATIVA' ||
+    e === 'ATIVO' || e === 'OK' || e === 'TRABALHADO'
+  ) {
+    cls = 'pill-ok';
+  }
+  else if (e === 'PENDENTE') {
+    cls = 'pill-warn';
+  }
+  else if (
+    e === 'REJEITADO' || e === 'REJEITADA' ||
+    e === 'CANCELADO' || e === 'CANCELADA' ||
+    e === 'INATIVO' || e === 'EXPIRADA'
+  ) {
+    cls = 'pill-err';
+  }
+  else if (
+    e === 'COM_EXTRA' || e === 'A_TRABALHAR' ||
+    e === 'TERMINOU' || e === 'UTIL'
+  ) {
+    cls = 'pill-info';
+  }
+  return '<span class="pill ' + cls + '">' + esc(e || '-') + '</span>';
+}
+
+/* Etiqueta de erro de calculo, separada de pill() porque um estado
+   "ERRO" nao e um estado de negocio: e uma falha de leitura de dados.
+   Nao entra na cadeia de estados normais para nao ser confundido. */
+function pillErr(rotulo) {
+  return '<span class="pill pill-err">' + esc(rotulo || 'ERRO') + '</span>';
+}
+
+function kpi(rotulo, valor) {
+  return (
+    '<div class="kpi">' +
+    '<div class="kpi-label">' +
+    esc(rotulo) +
+    '</div>' +
+    '<div class="kpi-value">' +
+    esc(valor) +
+    '</div>' +
+    '</div>'
+  );
+}
+
+function hojeIso() {
+  return new Intl.DateTimeFormat(
+    'en-CA',
+    {
+      timeZone: 'Europe/Lisbon',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }
+  ).format(new Date());
+}
+
+function proximoSabadoIso() {
+  /* Próximo sábado (hoje conta) a partir da data de hoje em Europe/Lisbon.
+     A rotação de sábados ancora em dataInicio, por isso o default é um
+     sábado — evita desalinhar a contagem de semanas (calcularNumeroSabados_). */
+  const partes = hojeIso().split('-');
+  const d = new Date(Number(partes[0]), Number(partes[1]) - 1, Number(partes[2]));
+  d.setDate(d.getDate() + ((6 - d.getDay() + 7) % 7));
+  const mm = ('0' + (d.getMonth() + 1)).slice(-2);
+  const dd = ('0' + d.getDate()).slice(-2);
+  return d.getFullYear() + '-' + mm + '-' + dd;
+}
+
+/* Primeiro dia da semana (0 = domingo ... 6 = sábado). Quem manda é o
+   Config.gs, no servidor; aqui só se guarda o valor que ele devolveu no
+   login. Até o login chegar, assume-se segunda-feira — o mesmo valor por
+   omissão do backend, para nunca haver divergência entre os dois. */
+const PRIMEIRO_DIA_SEMANA_PADRAO = 1;
+let primeiroDiaSemana = PRIMEIRO_DIA_SEMANA_PADRAO;
+
+function inicioSemanaIso() {
+  const d = new Date();
+  const desloc = (d.getDay() - primeiroDiaSemana + 7) % 7;
+  d.setDate(d.getDate() - desloc);
+  return new Intl.DateTimeFormat(
+    'en-CA',
+    {
+      timeZone: 'Europe/Lisbon',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }
+  ).format(d);
+}
+
+/* Rótulo do filtro: deixa de dizer "Semana (2ª feira)" quando a semana não
+   começa à segunda-feira. */
+function rotuloSemana() {
+  const nomes = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+  return 'Semana (' + nomes[primeiroDiaSemana] + ')';
+}
+
+function mesAtualIso() {
+  return hojeIso().substring(0, 7);
+}
+const TAB_ORDER = [
+  { id: 'hoje', label: 'Hoje', adminOnly: true },
+  { id: 'extras', label: 'Extras', adminOnly: true },
+  { id: 'justificacoes', label: 'Justificações', adminOnly: true },
+  { id: 'correcoes', label: 'Correções', adminOnly: true },
+  { id: 'excecoes', label: 'Exceções', adminOnly: true },
+  { id: 'ausencias', label: 'Ausências', adminOnly: true },
+  { id: 'feriados', label: 'Feriados', adminOnly: true },
+  { id: 'sabados', label: 'Sábados', adminOnly: true },
+  { id: 'utilizadores', label: 'Utilizadores', adminOnly: true },
+  { id: 'sessoes', label: 'Sessões', adminOnly: true },
+  { id: 'relatorios', label: 'Relatórios', adminOnly: true },
+  { id: 'auditoria', label: 'Auditoria', adminOnly: true },
+  { id: 'erros', label: 'Erros', adminOnly: true },
+  { id: 'config', label: 'Configuração', adminOnly: true },
+  { id: 'backups', label: 'Backups', adminOnly: true },
+  { id: 'testes', label: 'Testes', adminOnly: true },
+  { id: 'resumos', label: 'Resumos', adminOnly: true },
+  { id: 'minhasemana', label: 'A minha semana', adminOnly: false },
+  { id: 'meumes', label: 'O meu mês', adminOnly: false },
+  { id: 'meurelatorio', label: 'O meu relatório', adminOnly: false },
+  { id: 'minhasextras', label: 'As minhas extras', adminOnly: false },
+  { id: 'minhasausencias', label: 'As minhas ausências', adminOnly: false },
+  { id: 'novajustificacao', label: 'Nova justificação', adminOnly: false },
+  { id: 'minhapassword', label: 'Alterar password', adminOnly: false }
+];
+
+const TABS = {
+  hoje: loadTabHoje,
+  extras: loadTabExtras,
+  justificacoes: loadTabJustificacoes,
+  correcoes: loadTabCorrecoes,
+  excecoes: loadTabExcecoes,
+  ausencias: loadTabAusencias,
+  feriados: loadTabFeriados,
+  sabados: loadTabSabados,
+  utilizadores: loadTabUtilizadores,
+  sessoes: loadTabSessoes,
+  relatorios: loadTabRelatorios,
+  auditoria: loadTabAuditoria,
+  erros: loadTabErros,
+  config: loadTabConfig,
+  backups: loadTabBackups,
+  testes: loadTabTestes,
+  resumos: loadTabResumos,
+  minhasemana: loadTabMinhaSemana,
+  meumes: loadTabMeuMes,
+  meurelatorio: loadTabMeuRelatorio,
+  minhasextras: loadTabMinhasExtras,
+  minhasausencias: loadTabMinhasAusencias,
+  novajustificacao: loadTabNovaJustificacao,
+  minhapassword: loadTabMinhaPassword
+};
+
+function estadoFilter() {
+  return [{
+    name: 'estado',
+    label: 'Estado',
+    type: 'select',
+    options: [
+      { v: 'PENDENTE', l: 'Pendentes' },
+      { v: 'APROVADO', l: 'Aprovadas' },
+      { v: 'REJEITADO', l: 'Rejeitadas' },
+      { v: 'CANCELADO', l: 'Canceladas' },
+      { v: '', l: 'Todas' }
+    ]
+  }];
+}
+function buildFilters(filters) {
+  if (!filters || !filters.length) {
+    return '';
+  }
+  let html = '';
+  filters.forEach(function (f) {
+    html += '<label class="fitem">' + esc(f.label) + ' ';
+    if (f.type === 'select') {
+      html += '<select data-filter="' + esc(f.name) + '">';
+      (f.options || []).forEach(function (o) {
+        html += '<option value="' + esc(o.v) + '">' + esc(o.l) + '</option>';
+      });
+      html += '</select>';
+    }
+    else {
+      html += '<input type="' + esc(f.type || 'text') + '" data-filter="' + esc(f.name) + '"' + (f.value ? ' value="' + esc(f.value) + '"' : '') + (f.placeholder ? ' placeholder="' + esc(f.placeholder) + '"' : '') + '>';
+    }
+    html += '</label>';
+  });
+  html += '<button class="mini" id="filterApply" type="button">Aplicar</button>';
+  return html;
+}
+
+function buildPanelTable(view) {
+  let html = '<div class="table-wrap"><table><thead><tr>';
+  view.headers.forEach(function (h) {
+    html += '<th>' + esc(h) + '</th>';
+  });
+  html += '<th>Ações</th></tr></thead><tbody>';
+  (view.rows || []).forEach(function (row) {
+    html += '<tr>';
+    (row.cells || []).forEach(function (c, i) {
+      /* data-label: no telemóvel (ver CSS) a tabela passa a lista e cada
+         linha mostra "Rótulo: valor". O cabeçalho some do ecrã, por isso
+         o nome da coluna tem de vir na própria célula. */
+      html += '<td data-label="' + esc(view.headers[i] || '') + '">' + c + '</td>';
+    });
+    html += '<td class="cell-actions">';
+    (row.actions || []).forEach(function (a) {
+      html += '<button class="mini" type="button" data-action="' + esc(a.action) + '" data-id="' + esc(a.id == null ? '' : String(a.id)) + '"' + (a.extra ? ' data-extra="' + esc(JSON.stringify(a.extra)) + '"' : '') + '>' + esc(a.label) + '</button> ';
+    });
+    html += '</td></tr>';
+  });
+  html += '</tbody></table></div>';
+  return html;
+}
+
+/* =========================================================
+   EXPORTAÇÃO (Excel/CSV, Google Sheets, PDF)
+   Exporta exatamente a tabela visível no Painel: cada <td> é
+   convertido em texto (sem HTML) antes de sair.
+   ========================================================= */
+
+function barraExportacao() {
+  return '<div class="toolbar toolbar-export">' +
+    '<button class="mini" type="button" data-action="exportar.csv">Excel (CSV)</button>' +
+    '<button class="mini" type="button" data-action="exportar.sheets">Google Sheets</button>' +
+    '<button class="mini" type="button" data-action="exportar.pdf">PDF</button>' +
+    '</div>';
+}
+
+function celulaParaTexto_(html) {
+  const d = document.createElement('div');
+  d.innerHTML = html == null ? '' : String(html);
+  return String(d.textContent || '').replace(/\s+/g, ' ').trim();
+}
+
+function guardarExportSnapshot_(view) {
+  if (!view || !view.headers || !view.rows) {
+    S.exportacao = null;
+    return;
+  }
+  S.exportacao = {
+    titulo: view.title || 'Exportação',
+    colunas: view.headers.map(function (h) { return safe(h); }),
+    linhas: view.rows.map(function (r) {
+      return (r.cells || []).map(function (c) { return celulaParaTexto_(c); });
+    }),
+    filtros: currentFilters()
+  };
+}
+
+function imprimirExportacao() {
+  const t = S.exportacao;
+  if (!t || !t.linhas.length) { toast('Nada para exportar.', 'err'); return; }
+  const nome = (S.user && (S.user.nome || S.user.Nome)) || '';
+  const filtros = Object.keys(t.filtros || {}).length ? ' · filtros: ' + JSON.stringify(t.filtros) : '';
+  $('#printArea').innerHTML =
+    '<h1>' + esc(t.titulo) + '</h1>' +
+    '<div class="print-sub">' + esc(nome) + ' · ' + esc(hojeIso()) + esc(filtros) + '</div>' +
+    '<table><thead><tr>' + t.colunas.map(function (h) { return '<th>' + esc(h) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+    t.linhas.map(function (l) {
+      return '<tr>' + t.colunas.map(function (_, i) { return '<td>' + esc(l[i]) + '</td>'; }).join('') + '</tr>';
+    }).join('') +
+    '</tbody></table>';
+  document.body.classList.add('a-imprimir');
+  try { window.print(); }
+  finally { setTimeout(function () { document.body.classList.remove('a-imprimir'); }, 1000); }
+}
+
+function nomeFicheiroExport_(ext) {
+  const base = (S.exportacao && S.exportacao.titulo) || 'exportacao';
+  const semAcentos = base.normalize ? base.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : base;
+  const slug = semAcentos.replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase();
+  return 'picagem-' + (slug || 'exportacao') + '-' + hojeIso() + '.' + ext;
+}
+
+function csvDaExportacao_() {
+  const t = S.exportacao;
+  const celula = function (v) {
+    const s = safe(v);
+    return /[;"\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const linhas = [t.colunas.map(celula).join(';')];
+  t.linhas.forEach(function (l) {
+    linhas.push(t.colunas.map(function (_, i) { return celula(l[i]); }).join(';'));
+  });
+  return '\uFEFF' + linhas.join('\r\n');
+}
+
+function exportarCsv() {
+  const t = S.exportacao;
+  if (!t || !t.linhas.length) { toast('Nada para exportar.', 'err'); return; }
+  let ok = false;
+  try {
+    const blob = new Blob([csvDaExportacao_()], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nomeFicheiroExport_('csv');
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+    ok = true;
+  } catch (e) { ok = false; }
+  if (ok) toast('CSV criado (' + t.linhas.length + ' linhas). Abre no Excel.', 'ok');
+  else { toast('O navegador bloqueou o download. A tentar Google Sheets...', 'err'); exportarSheets(); }
+}
+
+function exportarSheets() {
+  const t = S.exportacao;
+  if (!t || !t.linhas.length) { toast('Nada para exportar.', 'err'); return; }
+  load('A criar folha no Google Sheets...');
+  api('exportarTabelaParaSheets', {
+    titulo: t.titulo,
+    cabecalhos: t.colunas,
+    linhas: t.linhas
+  }).then(function (r) {
+    unload();
+    if (!r || !r.sucesso || !r.url) { toast('Não foi possível exportar.', 'err'); return; }
+    showDetail('Exportação criada',
+      '<div class="detail-kv"><div class="k">Ficheiro</div><div>' + esc(r.nome) + '</div>' +
+      '<div class="k">Linhas</div><div>' + esc(r.linhas) + '</div></div>' +
+      '<div style="margin-top:10px"><a href="' + esc(r.url) + '" target="_blank" rel="noopener">Abrir no Google Sheets</a>' +
+      '<div class="empty" style="margin-top:6px">No Sheets: Ficheiro → Transferir → Microsoft Excel (.xlsx) ou PDF.</div></div>');
+    toast('Folha criada com ' + r.linhas + ' linhas.', 'ok');
+  }).catch(function (e) { unload(); serverError(e, 'exportarTabelaParaSheets'); });
+}
+
+function renderPanelView(view) {
+  view = view || {};
+  $('#panelTitle').textContent = view.title || '-';
+  $('#panelFilters').innerHTML = buildFilters(view.filters);
+  guardarExportSnapshot_(view);
+  let html = '';
+  if (view.note) html += view.note;
+  if (view.toolbar) html += '<div class="toolbar">' + view.toolbar + '</div>';
+  if (view.buttons) html += '<div class="toolbar">' + view.buttons + '</div>';
+  if (view.headers) {
+    if ((view.rows || []).length) html += barraExportacao();
+    html += buildPanelTable(view);
+  }
+  $('#panelTable').innerHTML = html || '<div class="empty">Sem dados.</div>';
+}
+function switchTab(tabId, filters) {
+  const meta = TAB_ORDER.filter(function (t) {
+    return t.id === tabId;
+  })[0];
+  if (!TABS[tabId] || !meta) {
+    return;
+  }
+  if (meta.adminOnly && !isAdmin()) {
+    return;
+  }
+  S.panelTab = tabId;
+  S.panelCache = {};
+  $all('#panelTabs .tab').forEach(function (b) {
+    b.classList.toggle('active', b.dataset.tab === tabId);
+  });
+  $('#panelTable').innerHTML = '<div class="empty">A carregar...</div>';
+  Promise.resolve()
+    .then(function () {
+      return TABS[tabId](filters || {});
+    })
+    .then(function (view) {
+      renderPanelView(view);
+    })
+    .catch(function (e) {
+      serverError(e, 'painel:' + tabId);
+      $('#panelTable').innerHTML = '<div class="empty">Erro ao carregar. Tente novamente.</div>';
+    });
+}
+
+function currentFilters() {
+  const out = {};
+  $all('#panelFilters [data-filter]').forEach(function (el) {
+    if (el.value !== '') {
+      out[el.getAttribute('data-filter')] = el.value;
+    }
+  });
+  return out;
+}
+
+function refreshTab() {
+  if (S.panelTab) {
+    switchTab(S.panelTab, currentFilters());
+  }
+}
+
+function buildPanelTabs() {
+  const wrap = $('#panelTabs');
+  const admin = isAdmin();
+  wrap.innerHTML = '';
+  TAB_ORDER.forEach(function (t) {
+    if (t.adminOnly && !admin) {
+      return;
+    }
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'tab';
+    b.dataset.tab = t.id;
+    b.textContent = t.label;
+    wrap.appendChild(b);
+  });
+}
+
+function openPanel() {
+  const nome = S.user ? (S.user.nome || S.user.Nome || '') : '';
+  $('#panelUser').textContent = nome + ' · ' + (isAdmin() ? 'ADMIN' : 'COLABORADOR');
+  hide('app');
+  show('panel');
+  buildPanelTabs();
+  switchTab(isAdmin() ? 'hoje' : 'minhasemana', {});
+}
+
+function closePanel() {
+  hide('panel');
+  hide('formCard');
+  hide('detailCard');
+  show('app');
+  loadDay(false);
+}
+
+function showDetail(titulo, html) {
+  $('#detailTitle').textContent = titulo;
+  $('#panelDetail').innerHTML = html;
+  show('detailCard');
+}
+
+function openForm(titulo, campos, rotuloSubmit, handler) {
+  $('#formTitle').textContent = titulo;
+  let html = '';
+  (campos || []).forEach(function (f) {
+    html += '<div class="fgroup"><label>' + esc(f.label) + '</label>';
+    if (f.type === 'select') {
+      html += '<select class="control" name="' + esc(f.name) + '">';
+      (f.options || []).forEach(function (o) {
+        html += '<option value="' + esc(o.v) + '"' + (String(o.v) === String(f.value) ? ' selected' : '') + '>' + esc(o.l) + '</option>';
+      });
+      html += '</select>';
+    }
+    else if (f.type === 'textarea') {
+      html += '<textarea class="control" name="' + esc(f.name) + '" rows="3"></textarea>';
+    }
+    else {
+      html += '<input class="control" type="' + esc(f.type || 'text') + '" name="' + esc(f.name) + '"' + (f.required ? ' required' : '') + (f.value ? ' value="' + esc(f.value) + '"' : '') + (f.placeholder ? ' placeholder="' + esc(f.placeholder) + '"' : '') + '>';
+    }
+    html += '</div>';
+  });
+  html += '<button class="btn primary" type="submit">' + esc(rotuloSubmit || 'Guardar') + '</button>';
+  $('#panelForm').innerHTML = html;
+  S.formHandler = handler;
+  show('formCard');
+}
+
+function onPanelFormSubmit(ev) {
+  ev.preventDefault();
+  const dados = {};
+  $all('#panelForm [name]').forEach(function (el) {
+    dados[el.name] = el.value;
+  });
+  if (typeof S.formHandler === 'function') {
+    S.formHandler(dados);
+  }
+  return false;
+}
+
+function syncPanelAccess(result) {
+  const btn = $('#panelBtn');
+  btn.title = isAdmin() ? 'Painel de gestão' : 'Os meus dados';
+  if (result && result.passwordAlteracaoPendente) {
+    openPanel();
+    switchTab('minhapassword', {});
+  }
+}
+function loadTabHoje() {
+  return api('getDashboardAdministrativo', new Date().toISOString()).then(function (r) {
+    if (!r || !r.sucesso) throw new Error('Sem dados do painel.');
+    const p = r.pendentes || {};
+    const res = r.resumo || {};
+    const note =
+      '<div class="kpis">' +
+      kpi('Extras pendentes', p.horasExtra) +
+      kpi('Justificações pendentes', p.justificacoes) +
+      kpi('Correções pendentes', p.correcoes) +
+      kpi('Exceções pendentes', p.excecoes) +
+      '</div>' +
+      '<div class="kpis">' +
+      kpi('Previsto hoje', res.totalHorasPlaneadas || '00:00') +
+      kpi('Trabalhado hoje', res.totalHorasTrabalhadas || '00:00') +
+      kpi('Extra hoje', res.totalHorasExtra || '00:00') +
+      kpi('Extra aprovada', res.totalHorasExtraAprovadas || '00:00') +
+      '</div>';
+    S.panelCache.hoje = {};
+    const falhos = [];
+    const rows = (r.painel || []).map(function (u, i) {
+      S.panelCache.hoje[i] = u;
+      /* O backend devolve ERRO_CALCULO em vez de rebentar o painel todo
+         quando um colaborador tem dados corrompidos. Mostramos o
+         problema nessa linha — um "0:00" sem explicação parecia
+         que a pessoa não tinha picado. */
+      if (u.erroCalculo) falhos.push(u);
+      return {
+        cells: [esc(u.nome), esc(u.profissao), u.erroCalculo ? pillErr('ERRO') : esc(u.tipoDia), u.erroCalculo ? pillErr('ERRO') : pill(u.estadoOperacional), esc(u.horasPlaneadas), esc(u.horasTrabalhadas), esc(u.horasNormais), esc(u.horasExtra), esc(u.horasExtraAprovadas)],
+        actions: [{ label: 'Detalhe', action: 'hoje.detalhe', id: String(i) }]
+      };
+    });
+    /* Uma linha de aviso no topo, só quando há mesmo problema: o gestor
+       vê logo que falta informação em vez de acreditar nos totais. */
+    if (falhos.length) {
+      note += '<div class="alert-inline">Não foi possível calcular o dia de ' +
+        falhos.map(function (u) { return esc(u.nome); }).join(', ') +
+        '. Os totais podem estar incompletos — abrir o detalhe para ver o erro.</div>';
+    }
+    return { title: 'Painel de hoje — ' + (r.data || ''), note: note, headers: ['Colaborador', 'Profissão', 'Tipo de dia', 'Estado', 'Previsto', 'Trabalhado', 'Normal', 'Extra', 'Extra aprov.'], rows: rows };
+  });
+}
+
+function loadTabExtras(f) {
+  return api('listarHorasExtra', { estado: f.estado || 'PENDENTE' }).then(function (r) {
+    const rows = (r.horasExtra || []).map(function (x) {
+      const actions = [];
+      if (x.estado === 'PENDENTE') {
+        actions.push({ label: 'Aprovar', action: 'extra.aprovar', id: x.id, cls: 'ok' });
+        actions.push({ label: 'Rejeitar', action: 'extra.rejeitar', id: x.id, cls: 'danger' });
+      }
+      else if (x.estado === 'APROVADO' || x.estado === 'REJEITADO') {
+        actions.push({ label: 'Cancelar', action: 'extra.cancelar', id: x.id, cls: 'danger' });
+      }
+      return { cells: [esc(x.data), esc(x.nome), esc(x.inicio), esc(x.fim), esc(mins(x.minutos)), esc(x.tipoDia), esc(x.origem), pill(x.estado)], actions: actions };
+    });
+    return { title: 'Horas extra', filters: estadoFilter(), headers: ['Data', 'Colaborador', 'Início', 'Fim', 'Minutos', 'Tipo dia', 'Origem', 'Estado'], rows: rows };
+  });
+}
+
+function loadTabJustificacoes(f) {
+  return api('listarJustificacoes', { estado: f.estado || 'PENDENTE' }).then(function (r) {
+    const rows = (r.justificacoes || []).map(function (x) {
+      const actions = [];
+      if (x.estado === 'PENDENTE') {
+        actions.push({ label: 'Aprovar', action: 'just.aprovar', id: x.id, cls: 'ok' });
+        actions.push({ label: 'Rejeitar', action: 'just.rejeitar', id: x.id, cls: 'danger' });
+      }
+      return { cells: [esc(x.data), esc(x.nome), esc(x.tipo), esc(x.descricao), esc(x.criadoPor), pill(x.estado)], actions: actions };
+    });
+    return { title: 'Justificações', filters: estadoFilter(), headers: ['Data', 'Colaborador', 'Tipo', 'Descrição', 'Criado por', 'Estado'], rows: rows };
+  });
+}
+
+function loadTabCorrecoes(f) {
+  return api('listarCorrecoes', { estado: f.estado || 'PENDENTE' }).then(function (r) {
+    const rows = (r.correcoes || []).map(function (x) {
+      const actions = [];
+      if (x.estado === 'PENDENTE') {
+        actions.push({ label: 'Aprovar', action: 'correcao.aprovar', id: x.id, cls: 'ok' });
+        actions.push({ label: 'Rejeitar', action: 'correcao.rejeitar', id: x.id, cls: 'danger' });
+      }
+      return { cells: [esc(x.data), esc(x.nome), esc(x.tipoCorrecao), esc(x.valorNovo), esc(x.tipoNovo), esc(x.motivo), pill(x.estado)], actions: actions };
+    });
+    return {
+      title: 'Correções de picagem',
+      filters: estadoFilter(),
+      toolbar: '<button class="mini" type="button" data-action="correcao.nova">Nova correção</button>',
+      headers: ['Data', 'Colaborador', 'Tipo', 'Valor novo', 'Tipo novo', 'Motivo', 'Estado'],
+      rows: rows
+    };
+  });
+}
+
+function loadTabExcecoes(f) {
+  return api('listarExcecoes', { estado: f.estado || 'PENDENTE' }).then(function (r) {
+    const rows = (r.excecoes || []).map(function (x) {
+      const actions = [];
+      if (x.estado === 'PENDENTE') {
+        actions.push({ label: 'Resolver', action: 'excecao.resolver', id: x.id, cls: 'ok' });
+        actions.push({ label: 'Descartar', action: 'excecao.descartar', id: x.id, cls: 'danger' });
+      }
+      return { cells: [esc(x.data), esc(x.nome), esc(x.tipo), esc(x.descricao), esc(x.prioridade), pill(x.estado)], actions: actions };
+    });
+    return {
+      title: 'Exceções',
+      filters: estadoFilter().concat([{ name: 'tipo', label: 'Tipo', type: 'text', placeholder: 'Tipo' }]),
+      headers: ['Data', 'Colaborador', 'Tipo', 'Descrição', 'Prioridade', 'Estado'],
+      rows: rows
+    };
+  });
+}
+function loadTabAusencias(f) {
+  return api('listarAusencias', { estado: f.estado || '', userId: f.userId || '' }).then(function (r) {
+    const rows = (r.ausencias || []).map(function (x) {
+      const actions = [];
+      if (x.estado === 'ATIVA') {
+        actions.push({ label: 'Cancelar', action: 'ausencia.cancelar', id: x.id, cls: 'danger' });
+      }
+      return { cells: [esc(x.dataInicio), esc(x.dataFim), esc(x.nome), esc(x.tipo), pill(x.estado), esc(x.motivo)], actions: actions };
+    });
+    return {
+      title: 'Ausências',
+      filters: [
+        { name: 'estado', label: 'Estado', type: 'select', options: [{ v: 'ATIVA', l: 'Ativas' }, { v: 'CANCELADA', l: 'Canceladas' }, { v: '', l: 'Todas' }] },
+        { name: 'userId', label: 'Utilizador', type: 'text', placeholder: 'ID' }
+      ],
+      toolbar: '<button class="mini" type="button" data-action="ausencia.nova">Nova ausência</button>',
+      headers: ['Início', 'Fim', 'Colaborador', 'Tipo', 'Estado', 'Motivo'],
+      rows: rows
+    };
+  });
+}
+
+function loadTabFeriados(f) {
+  return api('listarFeriados', { incluirInativos: true, ano: f.ano || '' }).then(function (r) {
+    const rows = (r.feriados || []).map(function (x) {
+      return {
+        cells: [esc(x.data), esc(x.descricao), pill(x.ativo ? 'ATIVO' : 'INATIVO'), esc(x.criadoPor)],
+        actions: [{ label: x.ativo ? 'Desativar' : 'Ativar', action: 'feriado.toggle', id: x.id, extra: { ativo: x.ativo }, cls: x.ativo ? 'danger' : 'ok' }]
+      };
+    });
+    return {
+      title: 'Feriados',
+      filters: [{ name: 'ano', label: 'Ano', type: 'text', placeholder: '2026', value: '' }],
+      toolbar: '<button class="mini" type="button" data-action="feriado.nova">Novo feriado</button>',
+      headers: ['Data', 'Descrição', 'Estado', 'Criado por'],
+      rows: rows
+    };
+  });
+}
+
+function loadTabSabados() {
+  return api('listarGruposSabado').then(function (r) {
+    let note = '';
+    (r.proximosSabados || []).forEach(function (p) {
+      const quem = (p.rotacao || []).map(function (x) { return esc(x.grupoId) + ': ' + esc(x.userId || '—'); }).join(' · ');
+      note += '<div><strong>' + esc(p.data) + '</strong> — ' + quem + '</div>';
+    });
+    const rows = (r.grupos || []).map(function (g) {
+      return {
+        cells: [esc(g.grupoId), esc(g.descricao), esc((g.ordem || []).join(', ')), esc(g.dataInicio || '—'), pill(g.ativo ? 'ATIVO' : 'INATIVO')],
+        actions: [{ label: 'Editar', action: 'sabado.editar', id: g.grupoId, extra: g }]
+      };
+    });
+    return {
+      title: 'Rotação de sábados',
+      note: '<div class="detail-kv"><div class="k">Próximos sábados</div><div>' + (note || '—') + '</div></div>',
+      toolbar: '<button class="mini" type="button" data-action="sabado.nova">Novo grupo</button>',
+      headers: ['Grupo', 'Descrição', 'Ordem', 'Início', 'Estado'],
+      rows: rows
+    };
+  });
+}
+
+function loadTabUtilizadores() {
+  return api('listarUtilizadores', { incluirInativos: true }).then(function (r) {
+    const rows = (r.utilizadores || []).map(function (u) {
+      const actions = [];
+      actions.push({ label: u.estado === 'ATIVO' ? 'Desativar' : 'Reativar', action: 'utilizador.toggle', id: u.id, extra: { estado: u.estado }, cls: u.estado === 'ATIVO' ? 'danger' : 'ok' });
+      /* Desbloquear sem mudar a password. */
+      if (u.bloqueado) actions.push({ label: 'Desbloquear', action: 'utilizador.desbloquear', id: u.id, cls: 'ok' });
+      actions.push({ label: 'Repor password', action: 'utilizador.password', id: u.id });
+      actions.push({ label: 'Editar', action: 'utilizador.editar', id: u.id, extra: u });
+
+      /* Estado: uma conta bloqueada tem de saltar aos olhos. O gestor
+         passa a ouvir o bloqueio (a pessoa vai avisar) em vez de
+         presumir que a pessoa se enganou. */
+      const estado = u.bloqueado
+        ? pillErr('BLOQUEADO') + ' <span class="hint-inline">' + esc(dateTime(u.bloqueadoAte)) + '</span>'
+        : pill(u.estado);
+      return { cells: [esc(u.id), esc(u.nome), esc(u.profissao), esc(u.perfil), esc(u.email), estado, esc(dateTime(u.ultimoLogin) || '—')], actions: actions };
+    });
+    return {
+      title: 'Utilizadores',
+      toolbar: '<button class="mini" type="button" data-action="utilizador.nova">Novo utilizador</button>',
+      headers: ['ID', 'Nome', 'Profissão', 'Perfil', 'Email', 'Estado', 'Último login'],
+      rows: rows
+    };
+  });
+}
+
+function loadTabSessoes(f) {
+  return api('listarSessoes', { incluirTerminadas: f.terminadas === '1' }).then(function (r) {
+    const rows = (r.sessoes || []).map(function (x) {
+      const actions = x.estado === 'ATIVA' ? [{ label: 'Terminar', action: 'sessao.terminar', id: x.id, cls: 'danger' }] : [];
+      return { cells: [esc(x.id), esc(x.userId), esc(dateTime(x.criadoEm)), esc(dateTime(x.expiraEm)), esc(dateTime(x.ultimaAtividade)), pill(x.estado)], actions: actions };
+    });
+    return {
+      title: 'Sessões',
+      filters: [{ name: 'terminadas', label: 'Mostrar terminadas', type: 'select', options: [{ v: '', l: 'Só ativas' }, { v: '1', l: 'Todas' }] }],
+      toolbar: '<button class="mini" type="button" data-action="sessao.limpar">Limpar expiradas</button>',
+      headers: ['ID', 'Utilizador', 'Criada', 'Expira', 'Última atividade', 'Estado'],
+      rows: rows
+    };
+  });
+}
+function loadTabRelatorios() {
+  const botoes = [
+    { a: 'rel.diaria', l: 'Diária' },
+    { a: 'rel.semanal', l: 'Semanal' },
+    { a: 'rel.mensal', l: 'Mensal' },
+    { a: 'rel.global', l: 'Global (intervalo)' },
+    { a: 'rel.extras', l: 'Extras (intervalo)' },
+    { a: 'rel.integridade', l: 'Integridade' },
+    { a: 'rel.individual', l: 'Individual' }
+  ].map(function (b) {
+    return '<button class="mini" type="button" data-action="' + b.a + '">' + esc(b.l) + '</button>';
+  }).join(' ');
+  return { title: 'Relatórios', buttons: botoes, note: '<div class="empty">Escolha um relatório acima. Todos derivam do mesmo motor de cálculo (calcularDia).</div>' };
+}
+
+function loadTabAuditoria(f) {
+  return api('consultarAuditoria', { acao: f.acao || '', userId: f.userId || '', limite: f.limite || '200' }).then(function (r) {
+    const rows = (r.registos || []).map(function (x) {
+      return { cells: [esc(dateTime(x.dataHora)), esc(x.acao), esc(x.userId), esc(x.descricao)], actions: [] };
+    });
+    return {
+      title: 'Auditoria',
+      filters: [
+        { name: 'acao', label: 'Ação', type: 'text', placeholder: 'LOGIN' },
+        { name: 'userId', label: 'Utilizador', type: 'text', placeholder: 'USR_…' },
+        { name: 'limite', label: 'Limite', type: 'text', placeholder: '200', value: '200' }
+      ],
+      headers: ['Data/hora', 'Ação', 'Utilizador', 'Descrição'],
+      rows: rows
+    };
+  });
+}
+
+/* Erros registados pelo backend. A folha LOG_ERROS ja era escrita por
+   `registarErro_` mas nunca era lida por ninguem: um erro aparecia no
+   registo e nao chegava ao ecrã de ninguem. Esta aba e' o caminho de volta. */
+function loadTabErros(f) {
+  return api('listarErros', { funcao: f.funcao || '', limite: f.limite || '200' }).then(function (r) {
+    const rows = (r.registos || []).map(function (x) {
+      return { cells: [esc(dateTime(x.dataHora)), esc(x.funcao), esc(x.mensagem), esc(x.userId)], actions: [] };
+    });
+    return {
+      title: 'Erros',
+      note: rows.length ? '' : '<div class="empty">Sem erros registados.</div>',
+      filters: [
+        { name: 'funcao', label: 'Função', type: 'text', placeholder: 'doGet' },
+        { name: 'limite', label: 'Limite', type: 'text', placeholder: '200', value: '200' }
+      ],
+      headers: ['Data/hora', 'Função', 'Mensagem', 'Utilizador'],
+      rows: rows
+    };
+  });
+}
+
+function loadTabConfig() {
+  return api('listarConfig').then(function (r) {
+    const editaveis = ['SESSAO_MINUTOS', 'MAX_TENTATIVAS_LOGIN', 'BLOQUEIO_MINUTOS', 'TOLERANCIA_MINUTOS', 'MAINTENANCE_MODE', 'HORARIO_SEMANA', 'HORARIO_SABADO', 'HORARIO_DOMINGO'];
+    const rows = Object.keys(r.config || {}).sort().map(function (chave) {
+      const pode = editaveis.indexOf(chave) >= 0;
+      return {
+        cells: [esc(chave), esc(r.config[chave])],
+        actions: pode ? [{ label: 'Editar', action: 'config.editar', id: chave, extra: { valor: r.config[chave] } }] : []
+      };
+    });
+    return { title: 'Configuração', note: '<div class="empty">Chaves VERSAO/APP_NOME/EMPRESA são geridas pelo código.</div>', headers: ['Chave', 'Valor'], rows: rows };
+  });
+}
+
+function loadTabBackups() {
+  return api('listarBackups', '50').then(function (r) {
+    const rows = (r.backups || []).map(function (b) {
+      return {
+        cells: [esc(b.id), esc(dateTime(b.dataHora)), esc(b.tipo), esc(b.descricao), esc((b.folhas || []).length + ' folhas'), pill(b.estado)],
+        actions: [{ label: 'Detalhe', action: 'backup.detalhe', id: b.id }]
+      };
+    });
+    return {
+      title: 'Backups',
+      toolbar: '<button class="mini" type="button" data-action="backup.nova">Criar backup</button>',
+      headers: ['ID', 'Data/hora', 'Tipo', 'Descrição', 'Folhas', 'Estado'],
+      rows: rows
+    };
+  });
+}
+
+function loadTabTestes() {
+  const botoes = [
+    { a: 'testes.executar', l: 'Executar todos os testes' },
+    { a: 'testes.registar', l: 'Registar no TESTES' },
+    { a: 'testes.diagnostico', l: 'Diagnóstico completo' }
+  ].map(function (b) {
+    return '<button class="mini" type="button" data-action="' + b.a + '">' + esc(b.l) + '</button>';
+  }).join(' ');
+  return { title: 'Testes', buttons: botoes, note: '<div class="empty">Executa os testes do motor (§99–108), rotação (§111) e diagnóstico por fases.</div>' };
+}
+
+function loadTabResumos() {
+  const botao = '<button class="mini" type="button" data-action="resumos.gerar">Gerar resumos</button>';
+  return { title: 'Resumos persistidos (§64–66)', buttons: botao, note: '<div class="empty">Gera snapshots DIÁRIO/SEMANAL/MENSAL nas folhas RESUMO_* (idempotente, atualiza a mesma linha).</div>' };
+}
+function totaisNote(t) {
+  return '<div class="kpis">' +
+    kpi('Previsto', t.horasPlaneadas) + kpi('Trabalhado', t.horasTrabalhadas) +
+    kpi('Normal', t.horasNormais) + kpi('Extra', t.horasExtra) +
+    kpi('Extra aprovada', t.horasExtraAprovadas) + kpi('Dias trabalhados', String(t.diasTrabalhados)) +
+    kpi('Ausências', String(t.ausencias)) + kpi('Exceções', String(t.excecoes)) +
+    '</div>';
+}
+
+function linhasDeDias(dias) {
+  const chaves = Object.keys(dias || {}).sort();
+  return chaves.map(function (data) {
+    const d = dias[data];
+    return { cells: [esc(data), esc(d.normal), esc(d.extra), pill(d.estado)], actions: [] };
+  });
+}
+
+function loadTabMinhaSemana(f) {
+  return api('minhaSemana', f.inicio || inicioSemanaIso()).then(function (r) {
+    const linha = (r.linhas || [])[0] || {};
+    return {
+      title: 'A minha semana' + (r.semanaInicio ? ' (' + r.semanaInicio + ' → ' + r.semanaFim + ')' : ''),
+      filters: [{ name: 'inicio', label: rotuloSemana(), type: 'date', value: inicioSemanaIso() }],
+      note: totaisNote(linha),
+      headers: ['Data', 'Normal', 'Extra', 'Estado'],
+      rows: linhasDeDias(linha.dias)
+    };
+  });
+}
+
+function loadTabMeuMes(f) {
+  return api('meuMes', f.mes || mesAtualIso()).then(function (r) {
+    const linha = (r.linhas || [])[0] || {};
+    return {
+      title: 'O meu mês — ' + (r.mes || ''),
+      filters: [{ name: 'mes', label: 'Mês', type: 'text', placeholder: 'YYYY-MM', value: mesAtualIso() }],
+      note: totaisNote(linha),
+      headers: ['Colaborador', 'Profissão'],
+      rows: [{ cells: [esc(linha.nome || ''), esc(linha.profissao || '')], actions: [] }]
+    };
+  });
+}
+
+function loadTabMeuRelatorio(f) {
+  return api('meuRelatorio', f.inicio || '', f.fim || hojeIso()).then(function (r) {
+    const rows = (r.linhas || []).map(function (x) {
+      /* A menção vai na PRÓPRIA linha do dia, com o motivo que o utilizador
+         escreveu. Pedir correção a partir de um relatório e o pedido
+         desaparecer é pior do que não ter o botão. */
+      const mc = x.mencaoCorrecao || {};
+      let mencao = '<span class="muted">—</span>';
+      if (mc.estado === 'PEDIDO') mencao = pill('PEDIDO') + ' ' + esc(mc.motivo || '');
+      else if (mc.estado === 'APROVADA') mencao = pill('APROVADA') + ' <span class="muted">já respondida</span>';
+      else if (mc.estado === 'REJEITADA') mencao = pill('REJEITADA') + ' <span class="muted">recusada</span>';
+      const acoes = [];
+      if (mc.podePedir !== false) acoes.push({ label: 'Pedir correção', action: 'correcao.pedir', id: '', extra: { data: x.data } });
+      return {
+        cells: [esc(x.data), esc(x.diaSemana), esc(x.tipoDia), esc(x.previsto), esc(x.realizado), esc(x.normal), esc(x.extra), esc(x.extraAprovada), pill(x.estado), mencao],
+        actions: acoes
+      };
+    });
+    /* número no topo: quem abre o relatório vê logo que há N dias por
+       resolver, sem ter de os caçar linha a linha */
+    const aviso = r.correcoesPedidas > 0
+      ? '<div class="aviso"><strong>' + r.correcoesPedidas + '</strong> dia(s) com pedido de correção à espera de resposta.</div>'
+      : '';
+    return {
+      title: 'O meu relatório' + (r.periodo ? ' (' + r.periodo.inicio + ' → ' + r.periodo.fim + ')' : ''),
+      filters: [
+        { name: 'inicio', label: 'Início', type: 'date', value: (r.periodo && r.periodo.inicio) || inicioSemanaIso() },
+        { name: 'fim', label: 'Fim', type: 'date', value: hojeIso() }
+      ],
+      note: aviso + totaisNote(r.totais || {}),
+      headers: ['Data', 'Dia', 'Tipo', 'Previsto', 'Realizado', 'Normal', 'Extra', 'Extra aprov.', 'Estado', 'Correção'],
+      rows: rows
+    };
+  });
+}
+
+function loadTabMinhasExtras(f) {
+  return api('minhasHorasExtra', { estado: f.estado || '' }).then(function (r) {
+    const rows = (r.horasExtra || []).map(function (x) {
+      return { cells: [esc(x.data), esc(x.inicio), esc(x.fim), esc(mins(x.minutos)), esc(x.tipoDia), pill(x.estado)], actions: [] };
+    });
+    return { title: 'As minhas horas extra', filters: estadoFilter(), headers: ['Data', 'Início', 'Fim', 'Minutos', 'Tipo dia', 'Estado'], rows: rows };
+  });
+}
+
+function loadTabMinhasAusencias(f) {
+  return api('minhasAusencias', { estado: f.estado || '' }).then(function (r) {
+    const rows = (r.ausencias || []).map(function (x) {
+      return { cells: [esc(x.dataInicio), esc(x.dataFim), esc(x.tipo), pill(x.estado), esc(x.motivo)], actions: [] };
+    });
+    return {
+      title: 'As minhas ausências',
+      filters: [{ name: 'estado', label: 'Estado', type: 'select', options: [{ v: 'ATIVA', l: 'Ativas' }, { v: 'CANCELADA', l: 'Canceladas' }, { v: '', l: 'Todas' }] }],
+      toolbar: '<button class="mini" type="button" data-action="ausencia.nova">Pedir ausência</button>',
+      headers: ['Início', 'Fim', 'Tipo', 'Estado', 'Motivo'],
+      rows: rows
+    };
+  });
+}
+
+function loadTabNovaJustificacao() {
+  return {
+    title: 'Nova justificação',
+    toolbar: '<button class="mini" type="button" data-action="just.nova">Criar justificação</button>',
+    note: '<div class="empty">A justificação é enviada para aprovação do gestor (estado PENDENTE). Tipos: ENTRADA_ANTECIPADA, SAIDA_TARDIA, TRABALHO_INTERVALO, DOMINGO, SABADO_NAO_PREVISTO, ERRO_PICAGEM, AUSENCIA, OUTRO.</div>'
+  };
+}
+
+function loadTabMinhaPassword() {
+  return {
+    title: 'Alterar password',
+    toolbar: '<button class="mini" type="button" data-action="pass.alterar">Alterar password</button>',
+    note: '<div class="empty">4 a 64 carateres. Se a password foi reposta pelo gestor, o campo "atual" pode ficar vazio.</div>'
+  };
+}
+const ACTIONS = {
+  'exportar.csv': function () { exportarCsv(); },
+  'exportar.sheets': function () { exportarSheets(); },
+  'exportar.pdf': function () { imprimirExportacao(); },
+  'pass.alterar': function () {
+    openForm('Alterar password', [
+      { name: 'atual', label: 'Password atual (vazio se foi reposta pelo gestor)', type: 'password' },
+      { name: 'nova', label: 'Nova password (4 a 64 carateres)', type: 'password', required: true },
+      { name: 'repetir', label: 'Repetir nova password', type: 'password', required: true }
+    ], 'Alterar', function (d) {
+      if (String(d.nova) !== String(d.repetir)) { toast('As passwords não coincidem.', 'err'); return; }
+      load('A alterar password...');
+      api('alterarMinhaPassword', d.atual || '', d.nova).then(function (r) {
+        unload();
+        hide('formCard');
+        if (S.user) S.user.passwordAlteracaoPendente = false;
+        toast(r && r.sucesso ? 'Password alterada.' : 'Não foi possível alterar.', r && r.sucesso ? 'ok' : 'err');
+        refreshTab();
+      }).catch(function (e) { unload(); serverError(e, 'alterarMinhaPassword'); });
+    });
+  },
+  'rel.diaria': function () { executarRelatorio('diaria'); },
+  'rel.semanal': function () { executarRelatorio('semanal'); },
+  'rel.mensal': function () { executarRelatorio('mensal'); },
+  'rel.global': function () { executarRelatorio('global'); },
+  'rel.extras': function () { executarRelatorio('extras'); },
+  'rel.integridade': function () { executarRelatorio('integridade'); },
+  'rel.individual': function () { executarRelatorio('individual'); },
+  'hoje.detalhe': function (id) {
+    const u = (S.panelCache.hoje || {})[id];
+    if (!u) return;
+    /* Dia quebrado: primeiro o erro real, com o registo que o gestor
+       precisa para o corrigir, e só depois o resto (que é tudo a zero
+       e não significa nada). */
+    if (u.erroCalculo) {
+      showDetail('Detalhe — ' + (u.nome || ''),
+        '<div class="alert-inline"><strong>Não foi possível calcular o dia.</strong><br>' +
+        esc(u.erroCalculo) + '<br><br>As horas abaixo ficam a zero porque não foram calculadas, não porque a pessoa não trabalhou.</div>');
+      return;
+    }
+    let html = '<div class="detail-kv"><div class="k">Estado</div><div>' + pill(u.estadoOperacional) + '</div>' +
+      '<div class="k">Tipo de dia</div><div>' + esc(u.tipoDia) + '</div>' +
+      '<div class="k">Previsto</div><div>' + esc(u.horasPlaneadas) + '</div>' +
+      '<div class="k">Trabalhado</div><div>' + esc(u.horasTrabalhadas) + '</div>' +
+      '<div class="k">Normal</div><div>' + esc(u.horasNormais) + '</div>' +
+      '<div class="k">Extra</div><div>' + esc(u.horasExtra) + '</div>' +
+      '<div class="k">Extra aprovada</div><div>' + esc(u.horasExtraAprovadas) + '</div></div>';
+    html += '<strong>Picagens</strong><div>' + ((u.picagens || []).map(function (p) { return esc(time(p.dataHora)) + ' ' + esc(p.tipo); }).join(' · ') || '—') + '</div>';
+    html += '<strong style="display:block;margin-top:8px">Exceções</strong><div>' + ((u.excecoes || []).map(function (e) { return esc(e.tipo); }).join(' · ') || '—') + '</div>';
+    showDetail('Detalhe — ' + (u.nome || ''), html);
+  },
+  'extra.aprovar': function (id) { decidirHoraExtra(id, 'APROVADO'); },
+  'extra.rejeitar': function (id) { decidirHoraExtra(id, 'REJEITADO'); },
+  'extra.cancelar': function (id) { decidirHoraExtra(id, 'CANCELADO'); },
+  'just.aprovar': function (id) { decidirJust(id, 'APROVADA'); },
+  'just.rejeitar': function (id) { decidirJust(id, 'REJEITADA'); },
+  'just.nova': function () {
+    openForm('Nova justificação', [
+      { name: 'data', label: 'Data', type: 'date', required: true, value: hojeIso() },
+      { name: 'tipo', label: 'Tipo', type: 'select', required: true, options: [
+        { v: 'ENTRADA_ANTECIPADA', l: 'Entrada antecipada' },
+        { v: 'SAIDA_TARDIA', l: 'Saída tardia' },
+        { v: 'TRABALHO_INTERVALO', l: 'Trabalho no intervalo' },
+        { v: 'DOMINGO', l: 'Domingo' },
+        { v: 'SABADO_NAO_PREVISTO', l: 'Sábado não previsto' },
+        { v: 'ERRO_PICAGEM', l: 'Erro de picagem' },
+        { v: 'AUSENCIA', l: 'Ausência' },
+        { v: 'OUTRO', l: 'Outro' }
+      ] },
+      { name: 'descricao', label: 'Descrição', type: 'text', required: true },
+      { name: 'observacoes', label: 'Observações', type: 'text' }
+    ], 'Enviar', function (d) {
+      load('A enviar justificação...');
+      api('criarJustificacao', d).then(function (r) {
+        unload();
+        hide('formCard');
+        toast(r && r.sucesso ? 'Justificação enviada (' + r.id + ').' : 'Não foi possível enviar.', r && r.sucesso ? 'ok' : 'err');
+        refreshTab();
+      }).catch(function (e) { unload(); serverError(e, 'criarJustificacao'); });
+    });
+  },
+  'correcao.aprovar': function (id) { confirmar('Aprovar correção?', function () { return api('aprovarCorrecao', id); }); },
+  'correcao.rejeitar': function (id) { confirmar('Rejeitar correção?', function () { return api('rejeitarCorrecao', id); }); },
+  'correcao.nova': function () {
+    load('A carregar utilizadores...');
+    api('listarUtilizadores', {}).then(function (r) {
+      unload();
+      const opts = (r.utilizadores || []).map(function (u) { return { v: u.id, l: u.nome + ' (' + u.id + ')' }; });
+      openForm('Nova correção de picagem', [
+        { name: 'userId', label: 'Colaborador', type: 'select', required: true, options: opts },
+        { name: 'data', label: 'Data', type: 'date', required: true, value: hojeIso() },
+        { name: 'tipoCorrecao', label: 'Tipo de correção', type: 'select', required: true, options: [
+          { v: 'ALTERAR_HORA', l: 'Alterar hora' },
+          { v: 'ALTERAR_TIPO', l: 'Alterar tipo' },
+          { v: 'ALTERAR_HORA_E_TIPO', l: 'Alterar hora e tipo' },
+          { v: 'ADICIONAR_PICAGEM', l: 'Adicionar picagem' },
+          { v: 'REMOVER_PICAGEM', l: 'Remover picagem' }
+        ] },
+        { name: 'picagemId', label: 'ID da picagem (vazio para adicionar)', type: 'text' },
+        { name: 'valorNovo', label: 'Nova hora (HH:mm)', type: 'text', placeholder: '14:35' },
+        { name: 'tipoNovo', label: 'Novo tipo (se aplicável)', type: 'select', options: [
+          { v: '', l: '—' },
+          { v: 'ENTRADA_MANHA', l: 'Entrada manhã' },
+          { v: 'SAIDA_MANHA', l: 'Saída manhã' },
+          { v: 'ENTRADA_TARDE', l: 'Entrada tarde' },
+          { v: 'SAIDA_TARDE', l: 'Saída tarde' }
+        ] },
+        { name: 'motivo', label: 'Motivo (auditado)', type: 'text', required: true }
+      ], 'Criar correção', function (d) {
+        load('A criar correção...');
+        api('criarCorrecaoPicagem', d).then(function (r2) {
+          unload();
+          hide('formCard');
+          toast(r2 && r2.sucesso ? 'Correção ' + r2.id + ' criada (PENDENTE).' : 'Não foi possível criar.', r2 && r2.sucesso ? 'ok' : 'err');
+          refreshTab();
+        }).catch(function (e) { unload(); serverError(e, 'criarCorrecaoPicagem'); });
+      });
+    }).catch(function (e) { unload(); serverError(e, 'listarUtilizadores'); });
+  },
+  'excecao.resolver': function (id) { decidirExcecao(id, 'RESOLVIDA'); },
+  'excecao.descartar': function (id) { decidirExcecao(id, 'DESCARTADA'); },
+  'correcao.pedir': function (id, extra) {
+    /* O dia vem na linha da tabela, não num campo editável: evita que o
+       utilizador peça a correção do dia errado sem dar por isso. */
+    const data = extra && extra.data ? extra.data : hojeIso();
+    openForm('Pedir correção — ' + data, [
+      { name: 'data', label: 'Dia', type: 'date', required: true, value: data },
+      { name: 'motivo', label: 'O que está errado?', type: 'textarea' }
+    ], 'Enviar pedido', function (d) {
+      load('A enviar o pedido...');
+      api('pedirCorrecaoDia', d).then(function (r) {
+        unload();
+        hide('formCard');
+        toast(r && r.sucesso ? 'Pedido de correção enviado. Fica à espera de resposta.' : 'Não foi possível enviar.', r && r.sucesso ? 'ok' : 'err');
+        refreshTab();
+      }).catch(function (e) { unload(); serverError(e, 'pedirCorrecaoDia'); });
+    });
+  },
+  'ausencia.cancelar': function (id) { confirmar('Cancelar ausência ' + id + '?', function () { return api('cancelarAusencia', id); }); },
+  'ausencia.nova': function () {
+    const admin = isAdmin();
+    const campos = [];
+    if (admin) {
+      campos.push({ name: 'userId', label: 'Colaborador (vazio = eu)', type: 'text', placeholder: 'USR_…' });
+    }
+    campos.push({ name: 'dataInicio', label: 'Início', type: 'date', required: true, value: hojeIso() });
+    campos.push({ name: 'dataFim', label: 'Fim', type: 'date', required: true, value: hojeIso() });
+    campos.push({ name: 'tipo', label: 'Tipo', type: 'select', required: true, options: [
+      { v: 'FERIAS', l: 'Férias' },
+      { v: 'JUSTIFICADA', l: 'Falta justificada' },
+      { v: 'NAO_JUSTIFICADA', l: 'Falta injustificada' }
+    ] });
+    campos.push({ name: 'motivo', label: 'Motivo', type: 'text' });
+    openForm('Nova ausência', campos, 'Registar', function (d) {
+      load('A registar ausência...');
+      api('criarAusencia', d).then(function (r) {
+        unload();
+        hide('formCard');
+        toast(r && r.sucesso ? 'Ausência ' + r.id + ' registada.' : 'Não foi possível registar.', r && r.sucesso ? 'ok' : 'err');
+        refreshTab();
+      }).catch(function (e) { unload(); serverError(e, 'criarAusencia'); });
+    });
+  },
+  'feriado.toggle': function (id, extra) {
+    const ativo = !(extra && extra.ativo);
+    confirmar((ativo ? 'Ativar' : 'Desativar') + ' feriado ' + id + '?', function () { return api('definirEstadoFeriado', id, ativo); });
+  },
+  'feriado.nova': function () {
+    openForm('Novo feriado', [
+      { name: 'data', label: 'Data', type: 'date', required: true, value: hojeIso() },
+      { name: 'descricao', label: 'Descrição', type: 'text', required: true }
+    ], 'Criar', function (d) {
+      load('A criar feriado...');
+      api('criarFeriado', d).then(function (r) {
+        unload();
+        hide('formCard');
+        toast(r && r.sucesso ? 'Feriado ' + r.data + ' criado.' : 'Não foi possível criar.', r && r.sucesso ? 'ok' : 'err');
+        refreshTab();
+      }).catch(function (e) { unload(); serverError(e, 'criarFeriado'); });
+    });
+  },
+  'sabado.nova': function () {
+    openForm('Novo grupo de sábados', [
+      { name: 'grupoId', label: 'GrupoID', type: 'text', required: true, placeholder: 'GRUPO_…' },
+      { name: 'descricao', label: 'Descrição', type: 'text', required: true },
+      { name: 'ordem', label: 'Ordem (IDs separados por vírgula)', type: 'text', required: true, placeholder: 'USR_A, USR_B' },
+      { name: 'dataInicio', label: 'Data de início — primeiro sábado da rotação', type: 'date', required: true, value: proximoSabadoIso() }
+    ], 'Criar grupo', function (d) {
+      load('A criar grupo...');
+      api('criarGrupoSabado', {
+        grupoId: d.grupoId,
+        descricao: d.descricao,
+        ordem: d.ordem.split(',').map(function (x) { return x.trim(); }).filter(Boolean),
+        dataInicio: d.dataInicio
+      }).then(function (r) {
+        unload();
+        hide('formCard');
+        toast(r && r.sucesso ? 'Grupo ' + r.grupoId + ' criado.' : 'Não foi possível criar.', r && r.sucesso ? 'ok' : 'err');
+        refreshTab();
+      }).catch(function (e) { unload(); serverError(e, 'criarGrupoSabado'); });
+    });
+  },
+  'sabado.editar': function (id, extra) {
+    openForm('Editar grupo ' + id, [
+      { name: 'descricao', label: 'Descrição', type: 'text', value: extra.descricao },
+      { name: 'ordem', label: 'Ordem (IDs separados por vírgula)', type: 'text', value: (extra.ordem || []).join(', ') },
+      { name: 'dataInicio', label: 'Data de início — primeiro sábado da rotação', type: 'date', required: true, value: extra.dataInicio || proximoSabadoIso() }
+    ], 'Guardar', function (d) {
+      load('A guardar grupo...');
+      api('editarGrupoSabado', id, {
+        descricao: d.descricao,
+        ordem: d.ordem.split(',').map(function (x) { return x.trim(); }).filter(Boolean),
+        dataInicio: d.dataInicio
+      }).then(function (r) {
+        unload();
+        hide('formCard');
+        toast(r && r.sucesso ? 'Grupo atualizado.' : 'Não foi possível guardar.', r && r.sucesso ? 'ok' : 'err');
+        refreshTab();
+      }).catch(function (e) { unload(); serverError(e, 'editarGrupoSabado'); });
+    });
+  },
+  'utilizador.nova': function () {
+    openForm('Novo utilizador', [
+      { name: 'nome', label: 'Nome', type: 'text', required: true },
+      { name: 'profissao', label: 'Profissão', type: 'text' },
+      { name: 'perfil', label: 'Perfil', type: 'select', required: true, options: [{ v: 'COLABORADOR', l: 'Colaborador' }, { v: 'ADMIN', l: 'Administrador' }] },
+      { name: 'email', label: 'Email (login)', type: 'text', required: true, placeholder: 'nome@exemplo.pt' },
+      { name: 'password', label: 'Password inicial (4 a 64 carateres)', type: 'password', required: true }
+    ], 'Criar', function (d) {
+      load('A criar utilizador...');
+      api('criarUtilizador', d).then(function (r) {
+        unload();
+        hide('formCard');
+        if (r && r.sucesso && r.passwordGerada) {
+          window.prompt('Utilizador ' + r.id + ' criado.\nPassword gerada (copie e comunique ao colaborador):', r.passwordGerada);
+        }
+        toast(r && r.sucesso ? 'Utilizador ' + r.id + ' criado.' : 'Não foi possível criar.', r && r.sucesso ? 'ok' : 'err');
+        refreshTab();
+      }).catch(function (e) { unload(); serverError(e, 'criarUtilizador'); });
+    });
+  },
+  'utilizador.toggle': function (id, extra) {
+    const desativar = extra && extra.estado === 'ATIVO';
+    confirmar((desativar ? 'Desativar' : 'Reativar') + ' ' + id + '?', function () {
+      return api(desativar ? 'desativarUtilizador' : 'reativarUtilizador', id);
+    });
+  },
+  'utilizador.desbloquear': function (id) {
+    /* Desbloquear NÃO muda a password: a pessoa volta a entrar com a
+       que já tem. O texto diz isso para o gestor não repor a password
+       "por via de segurança" e trocar a password da equipa. */
+    confirmar('Desbloquear ' + id + '? A password mantem-se.', function () {
+      return api('desbloquearUtilizador', id);
+    });
+  },
+  'utilizador.password': function (id) {
+    const nova = window.prompt('Nova password para ' + id + ' (vazio = gerar automática):');
+    if (nova === null) return;
+    load('A repor password...');
+    api('reporPasswordUtilizador', id, nova, false).then(function (r) {
+      unload();
+      if (r && r.sucesso && r.passwordGerada) {
+        window.prompt('Password reposta para ' + id + '.\nPassword gerada (copie e comunique):', r.passwordGerada);
+      }
+      toast(r && r.sucesso ? 'Password reposta para ' + id + '.' : 'Não foi possível repor.', r && r.sucesso ? 'ok' : 'err');
+    }).catch(function (e) { unload(); serverError(e, 'reporPasswordUtilizador'); });
+  },
+  'utilizador.editar': function (id, extra) {
+    openForm('Editar ' + id, [
+      { name: 'nome', label: 'Nome', type: 'text', value: extra.nome },
+      { name: 'profissao', label: 'Profissão', type: 'text', value: extra.profissao },
+      { name: 'perfil', label: 'Perfil', type: 'select', value: extra.perfil, options: [{ v: 'COLABORADOR', l: 'Colaborador' }, { v: 'ADMIN', l: 'Administrador' }] },
+      { name: 'email', label: 'Email (login)', type: 'text', value: extra.email }
+    ], 'Guardar', function (d) {
+      load('A guardar utilizador...');
+      api('editarUtilizador', id, d).then(function (r) {
+        unload();
+        hide('formCard');
+        toast(r && r.sucesso ? 'Utilizador atualizado.' : 'Não foi possível guardar.', r && r.sucesso ? 'ok' : 'err');
+        refreshTab();
+      }).catch(function (e) { unload(); serverError(e, 'editarUtilizador'); });
+    });
+  },
+  'sessao.terminar': function (id) { confirmar('Terminar sessão ' + id + '?', function () { return api('terminarSessaoAdmin', id); }); },
+  'sessao.limpar': function () { confirmar('Marcar sessões expiradas?', function () { return api('limparSessoesExpiradas'); }); },
+  'config.editar': function (chave, extra) {
+    const valor = window.prompt('Novo valor para ' + chave + ':', (extra && extra.valor) || '');
+    if (valor === null) return;
+    load('A guardar configuração...');
+    api('definirConfig', chave, valor).then(function (r) {
+      unload();
+      toast(r && r.sucesso ? chave + ' atualizado.' : 'Não foi possível guardar.', r && r.sucesso ? 'ok' : 'err');
+      refreshTab();
+    }).catch(function (e) { unload(); serverError(e, 'definirConfig'); });
+  },
+  'backup.nova': function () {
+    const desc = window.prompt('Descrição do backup (opcional):') || '';
+    load('A criar backup...');
+    api('criarBackup', desc).then(function (r) {
+      unload();
+      toast(r && r.sucesso ? 'Backup ' + r.id + ' criado.' : 'Não foi possível criar.', r && r.sucesso ? 'ok' : 'err');
+      refreshTab();
+    }).catch(function (e) { unload(); serverError(e, 'criarBackup'); });
+  },
+  'backup.detalhe': function (id) {
+    load('A obter backup...');
+    api('obterBackup', id).then(function (r) {
+      unload();
+      const folhas = (r.detalhe && r.detalhe.folhas) || [];
+      let html = '<div class="table-wrap"><table><thead><tr><th>Folha</th><th>Linhas</th><th>Colunas</th></tr></thead><tbody>';
+      folhas.forEach(function (f) {
+        html += '<tr><td>' + esc(f && f.nome) + '</td><td>' + esc(f && f.linhas) + '</td><td>' + esc(f && f.colunas) + '</td></tr>';
+      });
+      html += '</tbody></table></div>';
+      showDetail('Backup ' + id, html);
+    }).catch(function (e) { unload(); serverError(e, 'obterBackup'); });
+  },
+  'testes.executar': function () {
+    load('A executar testes...');
+    api('executarTodosTestesCobertura').then(function (r) {
+      unload();
+      renderPanelView({
+        title: 'Testes — ' + (r.total || 0) + ' casos',
+        toolbar: '<button class="mini" type="button" data-action="testes.executar">Repetir</button> <button class="mini" type="button" data-action="testes.registar">Registar no TESTES</button>',
+        headers: ['Teste', 'Resultado', 'Esperado', 'Obtido'],
+        rows: (r.testes || []).map(function (t) {
+          return { cells: [esc(t.teste), pill(t.resultado === 'OK' ? 'OK' : 'REJEITADO'), esc(t.esperado || ''), esc(t.obtido || '')], actions: [] };
+        })
+      });
+    }).catch(function (e) { unload(); serverError(e, 'executarTodosTestesCobertura'); });
+  },
+  'testes.registar': function () {
+    load('A registar testes...');
+    api('registarTestesCobertura').then(function (r) {
+      unload();
+      toast(r && r.sucesso ? r.registados + ' testes registados.' : 'Não foi possível registar.', r && r.sucesso ? 'ok' : 'err');
+    }).catch(function (e) { unload(); serverError(e, 'registarTestesCobertura'); });
+  },
+  'testes.diagnostico': function () {
+    load('A executar diagnóstico...');
+    api('diagnosticoCompleto').then(function (r) {
+      unload();
+      const folhas = Object.keys((r.setup && r.setup.folhas) || {}).map(function (k) {
+        return esc(k) + ': ' + (r.setup.folhas[k] ? 'OK' : 'FALTA');
+      }).join('<br>');
+      const testes = (r.testes || []).map(function (t) { return esc(t.teste) + ' → ' + esc(t.resultado); }).join('<br>');
+      showDetail('Diagnóstico', '<div class="detail-kv"><div class="k">Versão</div><div>' + esc(r.versao) + '</div></div><strong>Folhas</strong><div>' + folhas + '</div><strong style="display:block;margin-top:8px">Testes do motor</strong><div>' + testes + '</div>');
+    }).catch(function (e) { unload(); serverError(e, 'diagnosticoCompleto'); });
+  },
+  'resumos.gerar': function () {
+    openForm('Gerar resumos', [
+      { name: 'data', label: 'Dia', type: 'date', value: hojeIso() },
+      { name: 'semanaInicio', label: rotuloSemana(), type: 'date', value: inicioSemanaIso() },
+      { name: 'mes', label: 'Mês', type: 'text', value: mesAtualIso(), placeholder: 'YYYY-MM' }
+    ], 'Gerar', function (d) {
+      load('A gerar resumos...');
+      api('gerarResumos', d).then(function (r) {
+        unload();
+        hide('formCard');
+        toast(r && r.sucesso ? 'Resumos gerados/atualizados.' : 'Não foi possível gerar.', r && r.sucesso ? 'ok' : 'err');
+      }).catch(function (e) { unload(); serverError(e, 'gerarResumos'); });
+    });
+  }
+};
+function decidirHoraExtra(id, estado) {
+  const obs = window.prompt('Observações (opcional):') || '';
+  load('A decidir hora extra...');
+  api(estado === 'APROVADO' ? 'aprovarHoraExtra' : (estado === 'REJEITADO' ? 'rejeitarHoraExtra' : 'cancelarHoraExtra'), id, obs).then(function (r) {
+    unload();
+    toast(r && r.sucesso ? 'Hora extra ' + id + ' -> ' + estado + '.' : 'Não foi possível decidir.', r && r.sucesso ? 'ok' : 'err');
+    refreshTab();
+  }).catch(function (e) { unload(); serverError(e, 'decidirHoraExtra'); });
+}
+
+function decidirJust(id, estado) {
+  const obs = window.prompt('Observações (opcional):') || '';
+  load('A decidir justificação...');
+  api(estado === 'APROVADA' ? 'aprovarJustificacao' : 'rejeitarJustificacao', id, obs).then(function (r) {
+    unload();
+    toast(r && r.sucesso ? 'Justificação ' + id + ' -> ' + estado + '.' : 'Não foi possível decidir.', r && r.sucesso ? 'ok' : 'err');
+    refreshTab();
+  }).catch(function (e) { unload(); serverError(e, 'decidirJust'); });
+}
+
+function decidirExcecao(id, estado) {
+  const obs = window.prompt('Observações (opcional):') || '';
+  load('A decidir exceção...');
+  api('decidirExcecao', id, estado, obs).then(function (r) {
+    unload();
+    toast(r && r.sucesso ? 'Exceção ' + id + ' -> ' + estado + '.' : 'Não foi possível decidir.', r && r.sucesso ? 'ok' : 'err');
+    refreshTab();
+  }).catch(function (e) { unload(); serverError(e, 'decidirExcecao'); });
+}
+
+function confirmar(mensagem, acao) {
+  if (!window.confirm(mensagem)) return;
+  load('A processar...');
+  Promise.resolve()
+    .then(acao)
+    .then(function (r) {
+      unload();
+      toast(r && r.sucesso ? 'Feito.' : 'Não foi possível concluir.', r && r.sucesso ? 'ok' : 'err');
+      refreshTab();
+    })
+    .catch(function (e) { unload(); serverError(e, 'acao'); });
+}
+
+function executarRelatorio(tipo) {
+  load('A gerar relatório...');
+  let pedido;
+  if (tipo === 'diaria') pedido = api('consultaDiaria', hojeIso(), {});
+  else if (tipo === 'semanal') pedido = api('consultaSemanal', inicioSemanaIso(), {});
+  else if (tipo === 'mensal') pedido = api('consultaMensal', mesAtualIso(), {});
+  else if (tipo === 'global') pedido = api('relatorioGlobal', inicioSemanaIso(), hojeIso(), {});
+  else if (tipo === 'extras') pedido = api('relatorioExtras', inicioSemanaIso(), hojeIso(), {});
+  else if (tipo === 'integridade') pedido = api('relatorioIntegridade', inicioSemanaIso(), hojeIso(), {});
+  else pedido = api('relatorioIndividual', '', inicioSemanaIso(), hojeIso());
+  pedido.then(function (r) {
+    unload();
+    mostrarRelatorio(tipo, r);
+  }).catch(function (e) { unload(); serverError(e, 'relatorio'); });
+}
+
+function mostrarRelatorio(tipo, r) {
+  let headers = [], rows = [], note = '';
+  if (tipo === 'diaria') {
+    headers = ['Colaborador', 'Tipo dia', 'Previsto', 'Realizado', 'Normal', 'Extra', 'Extra aprov.', 'Estado'];
+    rows = (r.linhas || []).map(function (x) {
+      return { cells: [esc(x.nome), esc(x.tipoDia), esc(x.previsto), esc(x.realizado), esc(x.normal), esc(x.extra), esc(x.extraAprovada), pill(x.estado)], actions: [] };
+    });
+    note = '<div class="empty">Diário — ' + esc(r.data || '') + '</div>';
+  }
+  else if (tipo === 'semanal') {
+    headers = ['Colaborador', 'Trabalhado', 'Contrato', 'Excedente', 'Ordinárias', 'Extra dia', 'Dias com excedente'];
+    rows = (r.linhas || []).map(function (x) {
+      const ex = x.excedente || {};
+      const dias = (ex.diasExcedente || []).map(function (d) {
+        return d.data.slice(8) + '/' + d.data.slice(5, 7) + ' +' + d.horasExcedente;
+      }).join('  ');
+      return {
+        cells: [
+          esc(x.nome),
+          esc(ex.horasTrabalhadas || x.horasTrabalhadas),
+          esc(ex.horasContrato || r.horasContrato || '40:00'),
+          esc(ex.horasExtraordinarias || '00:00'),
+          esc(x.horasNormais),
+          esc(ex.excedenteDiarioHoras || '00:00'),
+          esc(dias || '—')
+        ],
+        actions: []
+      };
+    });
+    note = '<div class="empty">' + esc(r.semanaInicio || '') +
+      (r.semanaFim ? ' → ' + esc(r.semanaFim) : '') + '</div>' +
+      '<div class="empty">Excedente = total trabalhado acima das ' +
+      esc(r.horasContrato || 40) + ' h de contrato. As <strong>horas extraordinárias</strong> ' +
+      'são as que entram no banco de horas. A coluna "Extra dia" soma o que se passou ' +
+      'do horário em cada dia, mesmo sem passar das ' + esc(r.horasContrato || 40) + ' h.</div>';
+  }
+  else if (tipo === 'mensal' || tipo === 'global') {
+    headers = ['Colaborador', 'Previsto', 'Trabalhado', 'Normal', 'Extra', 'Extra aprov.', 'Sábados', 'Domingos', 'Feriados', 'Ausências', 'Exceções'];
+    rows = (r.linhas || []).map(function (x) {
+      return { cells: [esc(x.nome), esc(x.horasPlaneadas), esc(x.horasTrabalhadas), esc(x.horasNormais), esc(x.horasExtra), esc(x.horasExtraAprovadas), esc(x.sabados), esc(x.domingos), esc(x.feriados), esc(x.ausencias), esc(x.excecoes)], actions: [] };
+    });
+    note = '<div class="empty">' + esc(r.semanaInicio || r.mes || '') + (r.periodo ? ' (' + esc(r.periodo.inicio) + ' → ' + esc(r.periodo.fim) + ')' : '') + '</div>';
+  }
+  else if (tipo === 'extras') {
+    headers = ['Data', 'Colaborador', 'Início', 'Fim', 'Minutos', 'Estado'];
+    rows = (r.linhas || []).map(function (x) {
+      return { cells: [esc(x.data), esc(x.nome), esc(x.inicio), esc(x.fim), esc(mins(x.minutos)), pill(x.estado)], actions: [] };
+    });
+    note = '<div class="kpis">' + kpi('Total extra', mins(r.totalMinutos)) + kpi('Registos', String(r.total)) + '</div>';
+  }
+  else if (tipo === 'integridade') {
+    headers = ['Situação', 'Colaborador', 'Data', 'Detalhe'];
+    const linhas = [];
+    (r.diasIncompletos || []).forEach(function (x) { linhas.push({ cells: ['Incompleto', esc(x.nome), esc(x.data), esc((x.excecoes || []).join(', '))], actions: [] }); });
+    (r.sequenciasInvalidas || []).forEach(function (x) { linhas.push({ cells: ['Sequência inválida', esc(x.nome), esc(x.data), esc((x.problemas || []).join('; '))], actions: [] }); });
+    (r.faltasPicagem || []).forEach(function (x) { linhas.push({ cells: ['Sem picagens', esc(x.nome), esc(x.data), esc(x.tipoDia)], actions: [] }); });
+    rows = linhas;
+    note = '';
+  }
+  else {
+    headers = ['Data', 'Dia', 'Tipo', 'Previsto', 'Realizado', 'Normal', 'Extra', 'Extra aprov.', 'Estado'];
+    rows = (r.linhas || []).map(function (x) {
+      return { cells: [esc(x.data), esc(x.diaSemana), esc(x.tipoDia), esc(x.previsto), esc(x.realizado), esc(x.normal), esc(x.extra), esc(x.extraAprovada), pill(x.estado)], actions: [] };
+    });
+    note = totaisNote(r.totais || {});
+  }
+  renderPanelView({ title: 'Relatório — ' + tipo, note: note, headers: headers, rows: rows });
+}
+function panelTableClick(ev) {
+  const btn = ev.target.closest ? ev.target.closest('[data-action]') : null;
+  if (!btn) return;
+  const acao = btn.getAttribute('data-action');
+  const id = btn.getAttribute('data-id') || '';
+  const extraRaw = btn.getAttribute('data-extra');
+  let extra = null;
+  try { extra = extraRaw ? JSON.parse(extraRaw) : null; } catch (e) { extra = null; }
+  const handler = ACTIONS[acao];
+  if (!handler) return;
+  if (acao.indexOf('.nova') >= 0 || acao === 'rel.diaria' || acao === 'rel.semanal' || acao === 'rel.mensal' || acao === 'rel.global' || acao === 'rel.extras' || acao === 'rel.integridade' || acao === 'rel.individual') {
+    handler();
+    return;
+  }
+  handler(id, extra);
+}
+
+function bindPanel() {
+  $('#panelBtn').addEventListener('click', openPanel);
+  $('#panelBackBtn').addEventListener('click', closePanel);
+  $('#panelLogoutBtn').addEventListener('click', logout);
+  $('#detailClose').addEventListener('click', function () { hide('detailCard'); });
+  $('#formClose').addEventListener('click', function () { hide('formCard'); });
+  $('#panelForm').addEventListener('submit', onPanelFormSubmit);
+  $('#panelTabs').addEventListener('click', function (ev) {
+    const b = ev.target.closest ? ev.target.closest('.tab') : null;
+    if (b) switchTab(b.dataset.tab, {});
+  });
+  $('#panelFilters').addEventListener('click', function (ev) {
+    if (ev.target && ev.target.id === 'filterApply') {
+      switchTab(S.panelTab, currentFilters());
+    }
+  });
+  $('#panelTable').addEventListener('click', panelTableClick);
+}
+
+document.addEventListener(
+  'DOMContentLoaded',
+  function() {
+
+    startClock();
+
+    $('loginForm')
+      .addEventListener(
+        'submit',
+        function(event) {
+
+          event.preventDefault();
+
+          login();
+        }
+      );
+
+    $('logoutBtn')
+      .addEventListener(
+        'click',
+        logout
+      );
+
+    $('refreshBtn')
+      .addEventListener(
+        'click',
+        function() {
+
+          loadDay(true);
+        }
+      );
+
+    document
+      .querySelectorAll('.punch')
+      .forEach(
+        function(button) {
+
+          button.addEventListener(
+            'click',
+            function() {
+
+              punch(
+                button.dataset.type,
+                button
+              );
+            }
+          );
+        }
+      );
+
+    show('login');
+
+    hide('loading');
+
+    bindPanel();
+
+    $('email').focus();
+  }
+);
+</script>
+
+</body>
+</html>

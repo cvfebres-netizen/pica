@@ -1,0 +1,70 @@
+INSPECCAO DE LIMPEZA
+  ficheiros de producao: 15 | de teste: 19 | funcoes declaradas: 268
+
+--- 1. FUNCOES QUE NINGUEM CHAMA ---
+  * registarTestesCobertura  (Consultas.gs:56)
+  * listarHorasExtra  (Consultas.gs:100)
+  * minhasHorasExtra  (Consultas.gs:106)
+  * listarCorrecoes  (Consultas.gs:112)
+  * consultarAuditoria  (Consultas.gs:173)
+  * definirEmailUtilizador  (Gestao.gs:11)
+  * definirCredenciaisUtilizador  (Gestao.gs:51)
+  * editarUtilizador  (Gestao.gs:197)
+  * minhasAusencias  (Gestao.gs:386)
+  * editarAusencia  (Gestao.gs:392)
+  * cancelarAusencia  (Gestao.gs:420)
+  * listarFeriados  (Gestao.gs:455)
+  * definirEstadoFeriado  (Gestao.gs:470)
+  * listarConfig  (Gestao.gs:487)
+  * criarGrupoSabado  (Gestao.gs:544)
+  * editarGrupoSabado  (Gestao.gs:565)
+  * listarSessoes  (Gestao.gs:609)
+  * terminarSessaoAdmin  (Gestao.gs:624)
+  * registarPicagem  (Motor.gs:45)
+  * apagarPicagem  (Motor.gs:63)
+  * recalcularMeuDia  (Persistencia.gs:78)
+  * recalcularDiaAdmin  (Persistencia.gs:79)
+  * aprovarHoraExtra  (Persistencia.gs:97)
+  * rejeitarHoraExtra  (Persistencia.gs:98)
+  * cancelarHoraExtra  (Persistencia.gs:99)
+  * criarJustificacao  (Persistencia.gs:102)
+  * aprovarJustificacao  (Persistencia.gs:125)
+  * rejeitarJustificacao  (Persistencia.gs:126)
+  * listarJustificacoes  (Persistencia.gs:141)
+  * criarCorrecaoPicagem  (Persistencia.gs:164)
+  * rejeitarCorrecao  (Persistencia.gs:270)
+  * consultaDiaria  (Relatorios.gs:95)
+  * relatorioExtras  (Relatorios.gs:242)
+  * relatorioIntegridade  (Relatorios.gs:248)
+  * minhaSemana  (Relatorios.gs:273)
+  * meuMes  (Relatorios.gs:278)
+  * exportarTabelaParaSheets  (Relatorios.gs:292)
+  * gerarResumos  (ResumosBackups.gs:63)
+  * criarBackup  (ResumosBackups.gs:81)
+  * listarBackups  (ResumosBackups.gs:103)
+  * obterBackup  (ResumosBackups.gs:118)
+  * listarGruposSabado  (RotacaoLeitura.gs:5)
+  * terminarSessao  (Seguranca.gs:721)
+  * estadoInstalacao_  (Utilitarios.gs:205)
+  * obterResumoColaborador  (WebApp.gs:161)
+  * diagnosticoCompleto  (WebApp.gs:185)
+  * getDashboardAdministrativo  (WebApp.gs:252)
+
+--- 2. VARIAVEIS DE TOPO DECLARADAS E NUNCA USADAS ---
+  nenhum
+
+--- 3. MARCADORES DE TRABALHO EM ABERTO ---
+  [TODO] Consultas.gs:6  TESTES DE COBERTURA DO TODO (┬º99ÔÇô108, ┬º111, ┬º98)
+  [TEMP] Persistencia.gs:261  if(c.tipoCorrecao==='ADICIONAR_PICAGEM'){const h=converterValorParaDataHora_(c
+  [TODO] Seguranca.gs:142  mant├®m outro: quando uma folha cresce para sempre, TODO o custo
+  [TODO] index.html:991  mais largo que a p├ígina faz scroll horizontal de TODO o site, e o
+  [TODO] _auditoria_lixo.js:75  const MARCADORES = /\b(TODO|FIXME|XXX|HACK|TEMP|POR FAZER|DEBUG)\b/g;
+  [TODO] _check_documentacao.js:105  /* TODO o texto que diz "N cenarios" ou "N suites", e nao so a linha da tabela
+
+--- 4. console.log DENTRO DE CODIGO DE PRODUCAO ---
+  nenhum
+
+--- 5. BLOCOS DE CODIGO COMENTADOS (3+ linhas) ---
+  nenhum
+
+TOTAL DE ACHADOS: 53

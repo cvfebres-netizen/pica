@@ -1,0 +1,184 @@
+# Estado do projeto — Sistema de Picagem de Ponto (CVF)
+
+> Documento gerado a partir do codigo. Se um numero aqui mudar no codigo,
+> muda aqui tambem. Nao editar numeros a mao.
+
+## Estado geral: PRONTO A INSTALAR
+
+Todas as suites passam, o pacote de upload esta sincronizado com o codigo
+fonte e os cenarios de teste cobrem o percurso completo (instalar, entrar,
+picar, aprovar, corrigir, auditar, restaurar).
+
+## Concluido
+
+- [x] Instalador idempotente (pode correr varias vezes sem duplicar folhas)
+- [x] Login com password simples, sem hash e sem salt (decisao do cliente)
+- [x] Tolerancia a Caps Lock e a espacos colados (evita bloqueios por engano)
+- [x] Bloqueio progressivo: 8 tentativas, 15 min, reincidencia 60 min, 24 h
+- [x] Contador de bloqueios persistente (sobrevive a desbloqueios)
+- [x] Botao "Desbloquear" na lista de utilizadores (admin)
+- [x] Painel administrativo numa so leitura por utilizador
+- [x] Cache de folhas invalidado automaticamente em cada escrita
+- [x] Um dia corrompido nao derruba o painel inteiro (ERRO_CALCULO)
+- [x] Rotacao de sabados com ancora de sabado e calculo O(1)
+- [x] Sabado de escala conta como dia normal completo (7h30 normais)
+- [x] Interface responsiva (tabelas em lista, separadores com scroll)
+- [x] Zonas seguras (notch) e zoom nao bloqueado no telemóvel
+- [x] Impressao / PDF isolada da interface
+- [x] Auditoria de todas as accoes sensiveis
+- [x] Exportacao CSV e PDF por tabela
+- [x] Testes: 20 cenarios de simulacao + 11 suites de verificacao
+- [x] Ligacao do trigger diario: `instalarTriggers()` nao era chamado por
+      lado nenhum do codigo de producao, portanto o trigger das 3h nunca
+      era criado e a folha SESSOES ficava sem tecto. Passa a ser a
+      propria instalacao a cria-lo (`garantirTriggerManutencao_`, chamado
+      por `setupSistema`, por onde passam os dois caminhos de instalacao).
+      A suite verifica que a instalacao o cria e que reinstalar nao o
+      duplica
+- [x] `manutencaoDiaria` toma a lock: reescrevia a coluna Estado e apagava
+      linhas sem lock, ao contrario das outras 27 funcoes que escrevem. O
+      escalao 6 da suite de hardening so via escritas no corpo da propria
+      funcao, por isso nao a apanhava — a lacuna esta nomeada e testada
+- [x] As 2 auditorias de interligacao entram em `_verificacao_final.js`.
+      A `_auditoria_prova_execucao.js` estava vermelha (`FALHAS_PROVA:1`)
+      e nenhuma verificacao a corria: era um teste a pedir guarda para
+      uma funcao (`getMeuDia`) que foi removida de proposito
+- [x] `_auditoria_prova_execucao.js` deixou de dar azo a um falso "falhou
+      por outro motivo" e passou a calcular as linhas a que aponta a
+      partir do codigo, em vez de as ter escritas a mao (cinco referencias
+      estavam desatualizadas)
+- [x] `_auditoria_interligacoes.js` deixou de contar funcoes ANINHADAS
+      como superficie publica (acusava `P`, um atalho dentro de
+      `testesMotorCompleto_`) e reconhece `exigirOperacional_`, a guarda
+      real de `registarPicagem`. Devolve codigo 1 quando ha mesmo uma
+      porta aberta, ou quando nao consegue ler um corpo — um veredicto
+      desconhecido nunca e' um "ok"
+- [x] `LEIA-ME.md` mandava correr `testeCredenciaisSimples()`, que foi
+      removido por ser codigo morto
+- [x] Ligacao da persistencia: `guardarDiaTrabalho_`, `guardarExcecoesDoDia_`
+      e `guardarHorasExtraCalculadas_` so eram alcancaveis por
+      `recalcularEGuardarDia_`, e essa so era chamada por
+      `recalcularMeuDia`/`recalcularDiaAdmin` — que ninguem chama em
+      producao. Em producao, DIAS_TRABALHO e EXCECOES ficavam vazias e
+      **nunca se criava uma linha em HORAS_EXTRA**, ou seja, o fluxo de
+      aprovar/rejeitar hora extra nao tinha nada para decidir. A
+      persistencia passou a correr sozinha a cada picagem e a cada decisao
+      que muda as horas (correcao aprovada, justificacao aprovada)
+- [x] Fecho automatico das excecoes: sem ele, a excecao "saida tardia"
+      aberta quando a pessoa sai as 19:30 ficava PENDENTE para sempre, mesmo
+      depois de o gestor corrigir a hora para as 19:00 — e o gestor via o
+      mesmo falso alerta todos os dias. Uma excecao que deixa de se aplicar
+      fecha sozinha (estado `RESOLVIDA`, `ResolvidoPor` = `SISTEMA`), e so
+      uma PENDENTE: uma decisao do gestor nunca e' desfeita por isto
+- [x] `recalcularEGuardarDia_` passou a invalidar a cache das tres folhas que
+      escreve. Sem isso, quem lesse a seguir na mesma execucao (o painel, que
+      conta as pendentes) via os numeros de ANTES da escrita
+- [x] `decidirJustificacao_` passou a tomar a lock: escrevia (a coluna
+      Estado e, numa justificacao de falta, uma AUSENCIA) sem a tomar. Mesma
+      lacuna de um nivel que a de `manutencaoDiaria`
+- [x] `apagarPicagem` removida: nome publico que so fazia `throw`, ou seja
+      ruido na superficie do dispatcher
+- [x] Os erros registados em LOG_ERROS podiam ser lidos: `registarErro_`
+      escrevia a excecao em cinco pontos do codigo (doGet, getSpreadsheet_,
+      o calculo do dia, as picagens efectivas) e **nada os lia** — nem uma
+      aba, nem uma consulta. O gestor via a aplicacao a falhar em silencio e
+      a folha LOG_ERROS so aparecia se alguem a abrisse a mao. Passa a
+      existir `listarErros` (so ADMIN) e o separador **Erros**, com filtro
+      por funcao e limite
+- [x] A contagem de separadores na LEIA-ME deixou de estar escrita a mao no
+      `_check_documentacao.js` (eram "23" e "16" colados no teste). Agora o
+      teste le os numeros da propria LEIA-ME, como ja fazia com as suites
+- [x] Recursao infinita na falha da Spreadsheet: `getSpreadsheet_` chama
+      `registarErro_` no seu `catch`, e `registarErro_` chama
+      `getSpreadsheet_` para escrever — uma falha gerava outra, sem fim.
+      Medido por execucao: **2046 chamadas** de `getSpreadsheet_` numa unica
+      falha, ate a pilha rebentar. O `try/catch` de `registarErro_` nao
+      travava nada, porque a chamada que rebenta acontece antes de a
+      excecao poder ser apanhada. Agravante: o registo de erros ficava
+      inutilizavel justamente na falha que devia registar. Corrigido com
+      uma trava de re-entrada; agora sao **2 chamadas**
+- [x] `serializarParaFrontend_` (a unica recursao que resta) tinha um tecto
+      de profundidade. Os valores de hoje sao aciclicos, mas um unico
+      objecto que se aponte a si proprio rebentava a pilha sem deixar
+      rasto — e e' o serializador de toda a superficie publica
+- [x] `_auditoria_lacos.js`: nova auditoria de lacos e recursao. A suite de
+      hardening media `iterarDias_` e contava os `while`, mas nao via
+      recursao — que nao e' um laco e nao aparece em contagem nenhuma
+- [x] Entrega sem divergencia: `pica` e a fonte, o `picadeploy` e gerado a
+      partir dela e comparado byte a byte em cada verificacao
+- [x] Superficie publica fechada com `webapp.access = ANYONE`: o instalador
+      exige autorizacao, o motor de calculo passou a `calcularDia_` (interno)
+      e as sondas de diagnostico de desenvolvimento deixaram de ser publicas
+- [x] Todas as funcoes publicas que escrevem tomam a lock; o laco de datas
+      e' validado e as datas que transbordam (ex.: `2026-13-45`) sao
+      recusadas em vez de virarem um dia valido e errado
+- [x] Folha SESSOES com tecto: as expiradas sao marcadas com UMA escrita (e
+      nao uma por linha) e as terminadas/expiradas com mais de
+      `SESSOES_RETENCAO_DIAS` (90) sao podadas pelo trigger diario. Sessoes
+      ATIVAS e as folhas de registo nunca sao tocadas — provado por execucao
+- [x] Rotacao de sabado corrompida (JSON invalido em CONFIG_SABADOS) da
+      erro em vez de devolver uma lista vazia que fazia todos os sabados
+      contar como extra sem aviso
+- [x] O dia de um instante UTC (`...Z`, o que `toISOString()` devolve) mantem-se
+      no fuso de execucao: sem isto, `2026-01-01T00:00:00.000Z` registava a
+      picagem em 31-12-2025 em qualquer fuso a oeste de UTC. Provado em 6 fusos
+- [x] Suite de hardening independente do fuso da maquina (o tecto do laco de
+      datas deriva do caso medido, em vez de um numero colado no ficheiro)
+- [x] `APP.PRIMEIRO_DIA_SEMANA` passou a ser lido: a semana de `inicioDaSemana_`
+      segue a configuracao (antes era segunda-feira escrita a mao, e mudar a
+      constante nao fazia nada). O valor tambem vai no login, para a interface
+      calcular a mesma semana que o backend. Valores invalidos caem na segunda
+- [x] `_check_horas.js` nova suite: fixa a regra da contagem de horas (pares
+      entrada/saida, pausa nao contada, separacao por dia e por semana, sabado
+      de escala e sabado fora de escala). Antes estas garantias so estavam
+      provadas a mao, num script descartavel
+- [x] Codigo morto removido: 7 sondas `diagnosticoFase*`, `testeCredenciaisSimples_`,
+      `configurarCredenciaisManualmente_`, `testeMotorHorasFase3_`,
+      `determinarEstadoOperacionalUtilizador_`, `formatarDataPT_`,
+      `obterValorColuna_`, `minutosParaIntervalosData_`, `minhasPicagens`,
+      `minhasJustificacoes`, `obterJustificacaoAutenticada_`,
+      `marcarPasswordAlteracaoPendente_`, `nomePrimeiroDiaSemana_`,
+      `limparBloqueiosUtilizador_` e 4 aliases nunca chamados (`getEstadoHoje`,
+      `getMeuDia`, `getResumoColaborador`, `getPendentesAdministrativos`) —
+      cada alias publico e uma porta de entrada a mais no dispatcher
+
+## Por fazer (opcional, nao bloqueia a instalacao)
+
+- [ ] Aviso por email ao gestor quando um dia fica bloqueado
+- [ ] Exportacao para o sistema de folhas de ponto da empresa
+- [ ] Relatorio mensal em PDF pronto para entregar
+
+## Nao fazer
+
+- [x] NAO introduzir hash/salt nas passwords — o cliente pediu passwords
+      simples; o hash quebraria a tolerancia a Caps Lock e aos espacos
+      colados, e portanto causaria bloqueios por engano.
+- [x] NAO usar passwords de exemplo. As quatro passwords reais vivem em
+      `Config.gs` (`CREDENCIAIS_INICIAIS`).
+
+## Suites de teste
+
+Executar da pasta `pica`:
+
+    node _check_sintaxe.js
+    node _check_duplicados.js
+    node _check_frontend.js
+    node _check_frontend_responsivo.js
+    node _check_interface.js
+    node _check_geral.js
+    node _check_documentacao.js
+    node _check_referencias.js
+    node _check_hardening.js
+    node _check_horas.js
+    node _simular.js
+
+Todas devem terminar com codigo de saida 0.
+
+Depois de alterar o codigo, sincronizar a pasta de upload e verificar:
+
+    node _sincronizar.js
+    node _verificacao_final.js
+
+`pica` e a fonte. A pasta `picadeploy` (os 15 ficheiros de producao) e
+gerada a partir dela; `_comparar_pasta.js` confirma que as duas estao
+identicas.
