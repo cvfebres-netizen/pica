@@ -692,6 +692,114 @@ if (rel.length >= 2) {
   ass(ultimo.o.max < G.EXEC_MIN * 60, 'mesmo o intervalo de ' + ultimo.dias +
     ' dias cabe nos ' + G.EXEC_MIN + ' min (pior caso ' + ultimo.o.max.toFixed(1) + ' s)');
 }
+/* 5.3 IDAS AO SERVIDOR. O escalao 5 mede CELULAS LIDAS, que e' a metade
+   da factura. A outra metade e' o NUMERO DE CHAMADAS DE ESCRITA: cada
+   setValue/setValues/appendRow e' uma ida ao servidor, e o limite dos
+   6 minutos e' consumido pelo NUMERO delas — nao pelo volume. Um
+   setValues de 40 linhas custa o mesmo que um de 1 linha.
+
+   Isto nao aparecia em nenhuma conta: o escalao 5.1 mede leituras, e a
+   disciplina de lock (escalao 6) olha para o TEXTO das funcoes publicas,
+   nao para o custo das internas. `fecharExcecoesObsoletas_` era
+   exactamente esse ponto cego: corria a CADA recalculo de dia — o caminho
+   mais batido da aplicacao — e fazia QUATRO setValue por excecao fechada
+   (Estado, ResolvidoEm, ResolvidoPor, Observacoes), vezes N linhas. Com
+   40 excecoes obsoletas eram 160 idas ao servidor, sem tecto.
+
+   Mede-se a funcao REAL, por execucao, com um contador de escritas.
+   Nao ha contador de escritas no harness (so de leituras), por isso
+   intercepta-se o getRange da folha: e' por onde passam todas as
+   escritas. `appendRow` conta tambem. */
+function instrumentarEscritas(f) {
+  const originalGetRange = f.getRange;
+  const originalAppendRow = f.appendRow;
+  let n = 0;
+  f.getRange = function () {
+    const rg = originalGetRange.apply(this, arguments);
+    const sV = rg.setValue.bind(rg), sVs = rg.setValues.bind(rg);
+    rg.setValue = function () { n++; return sV.apply(null, arguments); };
+    rg.setValues = function () { n++; return sVs.apply(null, arguments); };
+    return rg;
+  };
+  f.appendRow = function () { n++; return originalAppendRow.apply(this, arguments); };
+  return { valor: function () { return n; }, zerar: function () { n = 0; } };
+}
+
+function custoEscritasExcecoes(n) {
+  const ctx = H.preparar();
+  const f = ctx.getSpreadsheet_().getSheetByName('EXCECOES');
+  if (!f) return { n: n, fechadas: -1, escritas: -1, err: 'folha EXCECOES inexistente' };
+  const cab = f.getRange(1, 1, 1, f.getLastColumn()).getValues()[0].map(function (x) { return String(x); });
+  const col = function (nome) { return cab.indexOf(nome); };
+  if (col('Estado') < 0 || col('UserID') < 0 || col('Data') < 0) {
+    return { n: n, fechadas: -1, escritas: -1, err: 'cabecalhos inesperados: ' + cab.join(',') };
+  }
+  /* O cenario que a aplicacao encontra todos os dias: N excecoes PENDENTE
+     do mesmo dia e do mesmo utilizador, escritas seguidas na folha. */
+  const dia = new Date(2026, 8, 18);
+  const linhas = [];
+  for (let i = 0; i < n; i++) {
+    const l = new Array(cab.length).fill('');
+    l[col('ID')] = 'EXC_' + i;
+    l[col('Data')] = dia;
+    l[col('UserID')] = 'U1';
+    l[col('Nome')] = 'Ana';
+    l[col('Tipo')] = 'PICAGEM_INCOMPLETA';
+    l[col('Prioridade')] = 'CRITICA';
+    l[col('Estado')] = 'PENDENTE';
+    l[col('CriadoEm')] = dia;
+    linhas.push(l);
+  }
+  f.getRange(2, 1, linhas.length, cab.length).setValues(linhas);
+  if (f.getLastRow() < 1 + n) return { n: n, fechadas: -1, escritas: -1, err: 'linhas nao entraram' };
+
+  /* A cache de folhas e' por execucao: sem a limpar, a funcao leria a folha
+     de OUTRO cenario e a medicao nao mediria o que diz medir. */
+  ctx.limparCacheFolhas_();
+  const contador = instrumentarEscritas(f);
+  let fechadas = 0, err = null;
+  try {
+    /* tiposActuais VAZIO: nenhuma condicao se aplica, logo todas as N
+       excecoes do dia sao obsoletas e tem de ser fechadas. */
+    fechadas = ctx.fecharExcecoesObsoletas_({ data: dia, userId: 'U1' }, []);
+  } catch (e) { err = e.message; }
+  return { n: n, fechadas: fechadas, escritas: contador.valor(), err: err };
+}
+
+const escExc = [];
+[1, 5, 20, 40].forEach(function (n) {
+  const r = custoEscritasExcecoes(n);
+  if (r.fechadas < 0) { erro('fecharExcecoesObsoletas_ com ' + n + ' obsoletas: ' + (r.err || 'sem medicao')); return; }
+  escExc.push(r);
+  nota('fechar ' + n + ' excecoes obsoletas -> ' + r.escritas + ' escrita(s) ao servidor' +
+    (r.err ? ' | ERRO ' + r.err : ''));
+});
+
+/* GUARDA CONTRA FALSO-VERDE, nos dois sentidos.
+
+   Sentido 1 — a medicao nao pode provar a coisa errada: se fechou MENOS do
+   que as N que la estao, o cenario nao correu e "1 escrita" seria o numero
+   de uma funcao que nao fez nada. Isto e' o mesmo defeito que o
+   insertSheet tinha no escalao 5.1: uma medicao que da sempre o mesmo
+   numero porque esta' a olhar para o sitio errado.
+
+   Sentido 2 — o crescimento: e' aqui que a regressao e' apanhada. Se
+   alguem voltar a meter um setValue por campo, o numero de escritas passa
+   a subir com n. Com 4 campos eram 4n; o tecto de 2n deixa folga para
+   blocos descontinuos e ainda assim falha em qualquer escrita por campo. */
+escExc.forEach(function (r) {
+  ass(r.fechadas === r.n, 'com ' + r.n + ' excecoes obsoletas, as ' + r.n + ' foram fechadas ' +
+    '(obtido ' + r.fechadas + ') — senao a medicao esta' + ' a correr sobre o cenario errado');
+});
+const ultExc = escExc[escExc.length - 1];
+if (ultExc && ultExc.fechadas > 0) {
+  ass(ultExc.escritas <= 2 * ultExc.n,
+    'as escritas NAO crescem com o numero de excecoes (' + ultExc.n + ' excecoes em ' +
+    ultExc.escritas + ' ida(s) ao servidor; o limite e ' + (2 * ultExc.n) + ') — ' +
+    'escrever campo a campo voltaria a custar 4 por excecao');
+  nota('idas ao servidor por excecao fechada: ' + (ultExc.escritas / ultExc.n).toFixed(2) +
+    ' (antes da correccao eram 4.00)');
+}
 
 /* ############ ESCALAO 6: DISCIPLINA DE LOCK ############
    waitLock do Google devolve FALSE se nao conseguir a lock. O codigo

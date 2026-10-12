@@ -167,6 +167,40 @@ O comportamento e' provado por EXECUCAO na suite de hardening (escalao 1.6),
 com uma folha semeada de casos: 3 sessoes ativas (nova, de 400 dias e de 13
 anos) sobrevivem todas, e saem exactamente as 3 fora da janela.
 
+### Idas ao servidor (escalao 5.3 da suite de hardening)
+
+Celulas lidas e **idas ao servidor** sao duas metades diferentes da mesma
+factura de 6 minutos. O escalao 5 media a primeira (um painel le ~129 000
+celulas por ano de historico); nada media a segunda — e e' ela que mata uma
+execucao, porque o limite e consumido pelo NUMERO de chamadas, nao pelo
+volume: um `setValues` de 40 linhas custa o mesmo que um de 1 linha.
+
+`fecharExcecoesObsoletas_` era esse ponto cego. Corre a cada recalculo de dia
+— o caminho mais batido da aplicacao — e fazia um `setValue` por campo
+(Estado, ResolvidoEm, ResolvidoPor, Observacoes). Com 40 excecoes obsoletas
+eram **160 idas ao servidor**, sem tecto, todas dentro da execucao do pedido.
+
+Agora os valores sao compostos em memoria sobre a linha que a cache JA tem e
+saem num `setValues` por bloco de linhas seguidas. As excecoes de um dia estao
+juntas na folha, logo o caso normal e **1 escrita**.
+
+| Excecoes obsoletas | Antes (4 por excecao) | Agora |
+|---|---|---|
+| 1 | 4 | 1 |
+| 20 | 80 | 1 |
+| 40 | 160 | 1 |
+
+O escalao 5.3 mede isto por execucao, com um contador de escritas montado
+sobre o `getRange` da folha. Tem duas guardas contra o falso-verde:
+
+- se fechar **menos** excecoes do que as N que estao la, assinala — senao o
+  "1 escrita" seria o numero de uma funcao que nao fez nada;
+- o tecto de escritas e **2n**, nao 1: deixa folga para blocos descontinuos e
+  ainda assim falha em qualquer escrita por campo.
+
+A regressao foi injectada a mao para confirmar o vermelho: com os quatro
+`setValue` de volta, a suite conta 4.00 idas por excecao e sai com codigo 1.
+
 **UrlFetch / email / documentos — NAO USADOS.** Zero ocorrencias de
 `UrlFetchApp`, `MailApp`, `sendEmail`, `GmailApp`, `DriveApp`. Nao ha
 cota de 20 000/dia, nem 100 000/dia, nem 1 500 destinatarios. Nao ha

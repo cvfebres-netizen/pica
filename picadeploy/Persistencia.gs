@@ -61,27 +61,62 @@ function criarExcecao_(resultado, tipo, descricao) {
      - só toca em PENDENTE: uma decisão do gestor nunca é desfeita por aqui;
      - uma exceção de um dia NÃO é afetada pelo recálculo de outro dia.
 
-   Escreve uma linha de cada vez, e só quando há mesmo alguma: o caminho
-   normal (todas as exceções continuam a valer) não paga ida ao servidor. */
+   Escreve em BLOCOS de linhas seguidas, e só quando há mesmo alguma: o caminho
+   normal (todas as exceções continuam a valer) não paga ida ao servidor.
+
+   ANTES eram QUATRO `setValue` por exceção fechada (Estado, ResolvidoEm,
+   ResolvidoPor, Observacoes) — quatro idas ao servidor por linha, vezes N
+   linhas. Esta função corre a cada recálculo de dia, que é o caminho mais
+   batido da aplicação, por isso o custo multiplicava-se pelo uso real. Agora
+   os valores são compostos em memória sobre a linha que a cache JÁ tem e saem
+   numa única `setValues` por bloco — no caso normal, todas as exceções de um
+   dia estão juntas na folha, logo uma só escrita. */
 function fecharExcecoesObsoletas_(resultado, tiposActuais) {
   const f = dadosFolha_(SHEETS.EXCECOES);
   if (!f.sheet || f.valores.length < 2) return 0;
   const dados = f.valores, mapa = f.mapa, iso = valorDataISO_(resultado.data), agora = new Date();
-  let fechadas = 0;
+  const nota = 'Fechada automaticamente: a condição deixou de se aplicar quando o dia foi recalculado.';
+  /* Uma escrita por BLOCO de linhas seguidas, não uma por exceção e muito
+     menos quatro. Em Apps Script cada escrita é uma ida ao servidor.
+     Estado, ResolvidoEm, ResolvidoPor e Observacoes caem no intervalo
+     [min, max] que os contém; as colunas do meio (ex.: CriadoEm) são
+     copiadas da linha já lida em cache, para não as apagar. */
+  const primeira = Math.min(mapa.Estado, mapa.Observacoes);
+  const ultima = Math.max(mapa.Estado, mapa.Observacoes);
+  const largura = ultima - primeira + 1;
+
+  const blocos = [];
+  let actual = null;
   for (let i = 1; i < dados.length; i++) {
     if (valorDataISO_(dados[i][mapa.Data]) !== iso) continue;
     if (String(dados[i][mapa.UserID] || '') !== String(resultado.userId)) continue;
     if (String(dados[i][mapa.Estado] || '') !== 'PENDENTE') continue;
     if (tiposActuais.indexOf(String(dados[i][mapa.Tipo] || '')) >= 0) continue;
-    const linha = i + 1;
-    f.sheet.getRange(linha, mapa.Estado + 1).setValue('RESOLVIDA');
-    f.sheet.getRange(linha, mapa.ResolvidoEm + 1).setValue(agora);
-    f.sheet.getRange(linha, mapa.ResolvidoPor + 1).setValue('SISTEMA');
-    f.sheet.getRange(linha, mapa.Observacoes + 1).setValue(
-      'Fechada automaticamente: a condição deixou de se aplicar quando o dia foi recalculado.');
-    fechadas++;
+
+    const novos = dados[i].slice(primeira, ultima + 1);
+    novos[mapa.Estado - primeira] = 'RESOLVIDA';
+    novos[mapa.ResolvidoEm - primeira] = agora;
+    novos[mapa.ResolvidoPor - primeira] = 'SISTEMA';
+    novos[mapa.Observacoes - primeira] = nota;
+
+    /* As exceções de um dia são escritas seguidas na folha, por isso juntam-se
+       num bloco só; um intervalo vazio fecha o bloco e começa outro. Assim, o
+       caso normal — várias exceções obsoletas do mesmo dia — é UMA escrita. */
+    const linhaFolha = i + 1;
+    if (actual && actual.fim === linhaFolha - 1) {
+      actual.linhas.push(novos);
+      actual.fim = linhaFolha;
+    } else {
+      if (actual) blocos.push(actual);
+      actual = { ini: linhaFolha, fim: linhaFolha, linhas: [novos] };
+    }
   }
-  return fechadas;
+  if (actual) blocos.push(actual);
+
+  blocos.forEach(function (b) {
+    f.sheet.getRange(b.ini, primeira + 1, b.linhas.length, largura).setValues(b.linhas);
+  });
+  return blocos.reduce(function (n, b) { return n + b.linhas.length; }, 0);
 }
 
 function guardarExcecoesDoDia_(resultado) {

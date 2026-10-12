@@ -132,6 +132,19 @@ picar, aprovar, corrigir, auditar, restaurar).
       entrada/saida, pausa nao contada, separacao por dia e por semana, sabado
       de escala e sabado fora de escala). Antes estas garantias so estavam
       provadas a mao, num script descartavel
+- [x] `fecharExcecoesObsoletas_` deixou de fazer 4 idas ao servidor por excecao
+      fechada. Corria a CADA recalculo de dia — o caminho mais batido da
+      aplicacao — e fazia um `setValue` por campo (Estado, ResolvidoEm,
+      ResolvidoPor, Observacoes): com 40 excecoes obsoletas eram 160 idas ao
+      servidor, sem tecto, todas pagas dentro da execucao de 6 min. Agora os
+      valores sao compostos em memoria sobre a linha que a cache JA tem e saem
+      num `setValues` por bloco de linhas seguidas — no caso normal, 1 escrita.
+      `_check_hardening.js` ganhou o escalao 5.3, que mede as IDAS AO SERVIDOR
+      (o escalao 5 so media celulas lidas, que e a outra metade da factura):
+      conta 4.00/excecao com a regressao injectada e 0.03 com o codigo certo.
+      O escalao tambem recusa dar verde a uma medicao que nao correu — se
+      fechar menos excecoes do que as N que la estao, assinala em vez de
+      reportar "1 escrita" de uma funcao que nao fez nada
 - [x] Codigo morto removido: 7 sondas `diagnosticoFase*`, `testeCredenciaisSimples_`,
       `configurarCredenciaisManualmente_`, `testeMotorHorasFase3_`,
       `determinarEstadoOperacionalUtilizador_`, `formatarDataPT_`,
