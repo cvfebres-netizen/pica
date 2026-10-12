@@ -37,8 +37,9 @@ function decidirExcecao(token,id,estado,observacoes){
 function obterUtilizadoresAtivos_(){return obterUtilizadores_().filter(function(u){return u.Estado===ENUMS.ESTADOS_UTILIZADOR.ATIVO;});}
 
 
-/* Separado de determinarEstadoOperacionalUtilizador_ para que o painel
-   possa reaproveitar um dia JÁ calculado em vez de o pedir outra vez. */
+/* Estado operacional a partir de um dia JÁ calculado (`calcularDia_`), sem
+   revalidar picagens: o painel chama `determinarEstadoOperacionalDe_` com o
+   mesmo `r` que já produziu, em vez de pedir o cálculo outra vez. */
 function determinarEstadoOperacionalDe_(r) {
   /* Dia que nao calculou: mostrar "SEM_PICAGEM" seria mentira — parece
      que a pessoa nao picou nada, quando nao sabemos. O gestor tem de

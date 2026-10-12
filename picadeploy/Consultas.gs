@@ -1,5 +1,5 @@
 /* ============================================================
-   CONSULTAS AUTENTICADAS — HORAS EXTRA + CORREÇÕES
+   CONSULTAS DE LEITURA — HORAS EXTRA / CORRECÇÕES / EXCEÇÕES
    ============================================================ */
 
 /* ============================================================
@@ -42,7 +42,16 @@ function testesRotacaoCobertura_() {
   for (let i = 0; i < grupo.ordem.length * 2 + 1; i++) {
     const data = new Date(normalizarData_(grupo.dataInicio).getTime()); data.setDate(data.getDate() + i * 7);
     if (!isSabado_(data)) continue;
-    resultados.push({ teste: 'rotacao semana ' + i, resultado: 'OK', esperado: grupo.ordem[i % grupo.ordem.length], obtido: calcularMembroRotacaoSabado_(grupo.grupoId, data) });
+    /* O `resultado` tem de sair da COMPARACAO. Aqui estava `resultado: 'OK'`
+       escrito a mao: o teste media os dois valores e imprimia-os, mas o
+       veredicto era fixo — a rotacao podia estar toda errada e a suite dizia
+       OK na mesma. `executarTodosTestesCobertura` filtra por
+       `resultado !== 'FALHOU'`, por isso nem falhava: era um teste que so
+       sabia dar verde. Assim passa a dizer o que viu, como
+       `testesCoberturaHorario_` ja fazia. */
+    const esperado = grupo.ordem[i % grupo.ordem.length];
+    const obtido = calcularMembroRotacaoSabado_(grupo.grupoId, data);
+    resultados.push({ teste: 'rotacao semana ' + i, resultado: esperado === obtido ? 'OK' : 'FALHOU', esperado: esperado, obtido: obtido });
   }
   return resultados;
 }
@@ -68,9 +77,11 @@ function registarTestesCobertura(token) {
 }
 
 /* Wrapper de leitura em cache: uma folha é lida UMA vez por execução
-   (ver dadosFolha_). Estas funções de listagem são abertas pelo utilizador
-   em cada clique num separador e, quando o separador é carregado mais do
-   que uma vez, reliam a folha inteira do zero. */
+   (ver dadosFolha_). As listagens abaixo são abertas num clique de separador
+   e, quando o mesmo separador é carregado mais de uma vez na mesma execução,
+   sem este wrapper reliam a folha inteira do zero. Devolve `null` quando a
+   folha não existe ou só tem cabeçalho — para o chamador poder devolver uma
+   lista vazia sem distinguir os dois casos. */
 function obterLinhasParaLeitura_(nomeFolha) {
   const f = dadosFolha_(nomeFolha);
   return (f && f.sheet && f.valores.length > 1) ? f : null;

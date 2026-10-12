@@ -141,6 +141,18 @@ picar, aprovar, corrigir, auditar, restaurar).
       `limparBloqueiosUtilizador_` e 4 aliases nunca chamados (`getEstadoHoje`,
       `getMeuDia`, `getResumoColaborador`, `getPendentesAdministrativos`) —
       cada alias publico e uma porta de entrada a mais no dispatcher
+- [x] `recalcularMeuDia` removido: o atalho "recalcula o MEU dia" nao tinha
+      nenhum botao na interface (`index.html` nao o chama) e so aparecia num
+      comentario do simulador — era codigo morto no dispatcher. Fica so
+      `recalcularDiaAdmin`, que o cenario 20 exercita
+- [x] Lixo de sessao apagado: `_lixo.txt` era um despejo de uma corrida
+      antiga (listava 8 sondas de diagnostico como mortas, ja todas limpas
+      entretanto) e `_10passes.log` um registo velho. Ficavam ao lado dos
+      scripts de verificacao e pareciam resultados actuais
+- [x] Cabecalho de `Consultas.gs` dizia "HORAS EXTRA + CORRECOES", mas o
+      ficheiro tambem traz as consultas de excecoes e de picagens; o bloco de
+      TESTES acaba na linha 68 e o que se segue e consulta de leitura, nao
+      testes. O titulo descrevia a metade do ficheiro
 
 ## Por fazer (opcional, nao bloqueia a instalacao)
 

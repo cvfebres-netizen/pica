@@ -50,10 +50,15 @@ function inicioDaSemana_(data) {
   return d;
 }
 
-/* Nome do primeiro dia, para a interface escrever "Semana (2a feira)" sem
-   repetir a palavra a mao em cada filtro. */
+/* Todos os dias do intervalo, calculados um a um pelo motor.
 
-function obterDiasTrabalhoIntervalo_(userId, dataInicio, dataFim, comExcecao) {
+   O quarto argumento que aqui havia (`comExcecao`) nao era usado pelo corpo e
+   nenhum dos 8 sitios que chamam esta funcao o passava: eram 4 parametros a
+   prometer um filtro de excepcoes que nao existia. Ficou de fora em vez de se
+   implementar, porque o relatorio precisa do dia COMPLETO — excepcoes
+   incluidas — para depois as contar. Um parametro que ninguem preenche e' uma
+   porta que parece aberta e nao esta. */
+function obterDiasTrabalhoIntervalo_(userId, dataInicio, dataFim) {
   return iterarDias_(dataInicio, dataFim).map(function(dia) {
     return calcularDia_(userId, dia);
   });

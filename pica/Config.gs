@@ -29,7 +29,7 @@ const APP = {
      semanal NAO se calcula contra `minutosPlaneados` (que daria sempre
      zero de diferenca por construcao), mas contra este valor.
 
-     Quem|Part-time mexe aqui: e' o unico sitio do sistema que diz quantas
+     Quem faz a escala part-time mexe aqui: e' o unico sitio do sistema que diz quantas
      horas uma semana vale. */
   HORAS_CONTRATO_SEMANA: 40,
   HORARIO: {

@@ -134,7 +134,12 @@ function recalcularEGuardarDia_(userId,data) {
   escritas.forEach(marcarFolhasAlteradas_);
   return r;
 }
-function recalcularMeuDia(token,data){const s=exigirSessao_(token);return recalcularEGuardarDia_(s.userId,data||new Date());}
+/* `recalcularMeuDia` — o atalho "recalcula o MEU dia" — foi REMOVIDO por
+   ser codigo morto: nao tinha nenhum botao na interface (`index.html` nao a
+   chama) e so aparecia num comentario do simulador. Duas funcoes publicas a
+   fazer o mesmo, uma delas por estrear, sao duas portas no dispatcher para
+   manter e uma delas nunca experimentada. Fica so a versao de administrador,
+   que e' a que o cenario 20 exercita. */
 function recalcularDiaAdmin(token,userId,data){exigirAdmin_(token);return recalcularEGuardarDia_(userId,data||new Date());}
 
 /* ============================================================
