@@ -1,28 +1,135 @@
-# Estado — Agente WhatsApp CVF
+# Memória — Agente WhatsApp Cvfebres Centro Veterinário de Febres
 
-## Estado geral: ESTRUTURA PRONTA, FALTA LIGAR
+## Estado geral: FUNCIONAL (testes simulados 11/11 OK), a aguardar ligação real ao Google Calendar e ao WhatsApp
 
-## Feito
-- [x] Estrutura de pastas criada
-- [x] LEIA-ME com arquitetura e decisão de interligação
-- [x] Gateway Baileys (QR local, sem browser, gratuito)
-- [x] Roteador de intenções simples (marcar/remarcar/cancelar/dúvida/urgência)
-- [x] Respostas curtas PT-PT sem rodeios
-- [x] Módulo Google Calendar (criar/mover/apagar/listar)
-- [x] Prompt do agente de atendimento
-- [x] Simulador de teste sem WhatsApp nem Google
-- [x] Script de instalação para o PC
+---
 
-## Falta (na clínica, com o telemóvel Business ao lado)
-- [ ] `npm install` no PC
-- [ ] Ligar Google Calendar (`npm run ligar-google`)
-- [ ] Ler QR com o WhatsApp Business
-- [ ] Teste real: marcar + remarcar + cancelar 1 consulta
-- [ ] Definir horário, morada e telefone no `.env`
-- [ ] Deixar PC ligado no horário de atendimento
+## ✅ Feito (implementado e validado)
 
-## Não fazer
-- [ ] NÃO usar Cloud API paga nem BSP
-- [ ] NÃO fazer difusão/spam (risco de ban)
-- [ ] NÃO diagnosticar doenças (só agenda e informa)
-- [ ] NÃO expor `.env` nem `auth_info/` no git
+### Arquitetura e stack
+- Estrutura de pastas criada (`src/`, `test/`, `scripts/`, `docs/`, `prompts/`)
+- LEIA-ME com arquitetura e decisão de interligação
+- Stack: Node.js + Baileys (WhatsApp local, sem browser, gratuito) + Google Calendar API v3 + JSON local para pendentes/escalation
+- `package.json` com scripts (`start`, `simular`, `ligar-google`, `lembretes`)
+- `node --check` OK em todos os ficheiros editados/novos
+
+
+### Gateway WhatsApp (`src/gateway/baileys-gateway.js`)
+- Conexão Baileys com autenticação local (sem browser)
+- Leitura de QR code para emparelhar telemóvel
+- Reconexão automática e deteção de mensagens próprias (evita loop)
+- Modo mononúmero: clínica = gestor (mesmo número `351932290927`); não envia aviso para si mesmo; aceita OK/NÃO de qualquer remetente com pendente
+
+### Roteador e respostas (`src/atendimento/roteador.js`, `respostas.js`)
+- Roteador de intenções: marcar / remarcar / cancelar / dúvida / urgência
+- Respostas curtas em PT-PT sem rodeios
+- Transcrição de áudio stub integrada no gateway (`src/atendimento/transcricao.js`)
+
+### Serviços e regras de negócio (`src/atendimento/servicos.js`)
+- Tabela de serviços: consulta, vacina, banho, tosquia, cirurgia, desparasitação, análises
+- Cada serviço com duração, preço, contacto direto, horários preferenciais, não sobreposição
+- Cirurgia requer contacto direto (não cria evento; avisa para ligar)
+- Banho/tosquia só aceitam 10:00 ou 14:30; senão avisa horário preferencial
+- Duração mínima tosquia: 90 min
+- Não sobrepõem entre si (banho e tosquia)
+- Urgência: avisa para ligar já, não cria evento
+
+### Google Calendar (`src/agenda/google-calendar.js`)
+- Criar/mover/apagar/listar eventos
+- Verificação de conflito (`horarioLivre`): `marcarProvisoria` lança `CONFLITO` se houver evento ocupado
+- Eventos criados como provisórios (pendentes de aprovação do gestor)
+
+### Pendentes e aprovação (`src/atendimento/pendentes.js`, `src/dados/pendentes.json`)
+- Registo de agendamentos provisórios aguardando OK/NÃO do gestor
+- Modo mononúmero: aceita OK/NÃO de qualquer remetente com pendente
+
+### Lembretes 24h antes (`src/agenda/lembretes.js`, `scripts/lembretes-diarios.js`)
+- Script `npm run lembretes` envia lembretes do dia seguinte
+- Pronto para ser colocado no SO cron (diário 09:00)
+
+### Escalation (`src/atendimento/escalation.js`, `src/dados/escalation.json`)
+- Após 2 mensagens não percebidas, avisa o gestor
+- Registo de falhas por número de telefone
+
+### Áudio (`src/atendimento/transcricao.js`)
+- Stub de transcrição de áudio integrado no gateway (preparado para whisper.cpp local ou OpenAI Whisper API)
+
+### Simulador e testes (`test/simulador.js`)
+- Simulador sem WhatsApp nem Google Calendar
+- 11/11 testes OK (inclui escalation, conflito, contacto direto, horários preferenciais)
+
+### Scripts de apoio
+- `scripts/instalar.bat` (instalação no PC da clínica)
+- `docs/ligacao-passo-a-passo.md`
+- `prompts/agente-atendimento.md`
+
+---
+
+## 🔄 Em progresso / Bloqueado
+
+| Item | Status | Bloqueador / Nota |
+|---|---|---|
+| `TELEFONE_CLINICA` no `.env` | 🔴 Bloqueado | Pode estar em falta no `.env.exemplo`; usado por `numeroClinica()` no roteador. Verificar e adicionar se necessário. |
+| Campos do formulário do Google Calendar | 🔴 Bloqueado | Link `calendar.app.google/6ZPswU6ftN2VKuUC9` carrega por JS; não foi possível extrair campos exatos. Necessário para criar `src/atendimento/formulario.js`. |
+| Transcrição de áudio real | 🟡 Pendente | Stub implementado; configurar whisper.cpp local ou OpenAI Whisper API se necessário. |
+
+## 📋 Necessário fazer (próximos passos imediatos)
+
+1. **Pedir ao utilizador os campos exatos do formulário de agendamento** (nome, email, telefone, animal, espécie, motivo, etc.) e criar `src/atendimento/formulario.js` com recolha passo a passo (FSM: nome → telefone → animal → espécie → serviço → data/hora → confirmação).
+2. **Verificar se `TELEFONE_CLINICA` está definido em `.env.exemplo`**; caso contrário, adicionar para que `MESMO_NUMERO` funcione corretamente.
+3. **Na clínica (com telemóvel Business ao lado):**
+   - `npm install` no PC
+   - Ligar Google Calendar (`npm run ligar-google`)
+   - Ler QR com o WhatsApp Business
+   - Teste real: marcar + remarcar + cancelar 1 consulta
+   - Definir horário, morada e telefone no `.env`
+   - Deixar PC ligado no horário de atendimento
+4. **Testar `npm run lembretes`** depois de ligar o Google Calendar e configurar no SO cron (diário 09:00).
+5. **Configurar transcrição de áudio real** em `src/atendimento/transcricao.js` (whisper.cpp local ou OpenAI Whisper API) se necessário.
+6. **Adicionar testes ao simulador** para contacto direto (cirurgia) e horários preferenciais (banho/tosquia).
+7. **Sincronizar git** após cada alteração (`git add`, `git commit`, `git push origin main`).
+
+---
+
+## 🚀 Pode ainda ser implementado (ideias futuras / roadmap)
+
+- Formulário passo a passo (`src/atendimento/formulario.js`) com campos extraídos do Google Calendar
+- Histórico de atendimentos por cliente (arquivo JSON por telefone)
+- Lista de espera quando não há horários disponíveis
+- Reagendamento automático sugerido pelo bot em caso de conflito
+- Múltiplos calendários (um por veterinário/serviço)
+- Painel web simples para o gestor ver e aprovar pendentes
+- Integração com ficheiro de clientes existente da clínica
+- Notificações de confirmação de presença (2h antes)
+- Suporte a múltiplos idiomas (PT-PT / EN)
+- Deploy em servidor dedicado (VPS/Raspberry Pi) em vez do PC da clínica
+
+## 🚫 Não fazer (regras e limites)
+
+- NÃO usar WhatsApp Cloud API paga nem BSP (Baileys é gratuito e local)
+- NÃO fazer difusão/spam (risco de ban do WhatsApp)
+- NÃO diagnosticar doenças (o bot só agenda e informa)
+- NÃO expor `.env` nem `auth_info/` no git
+- NÃO commitar `credentials.json` nem `token.json` do Google Calendar
+
+## 🔧 Ficheiros-chave da app
+
+| Ficheiro | Responsabilidade |
+|---|---|
+| `src/index.js` | Ponto de entrada |
+| `src/gateway/baileys-gateway.js` | Conexão WhatsApp (Baileys) |
+| `src/atendimento/roteador.js` | Roteador de intenções |
+| `src/atendimento/respostas.js` | Textos de resposta PT-PT |
+| `src/atendimento/servicos.js` | Tabela de serviços e regras de negócio |
+| `src/atendimento/pendentes.js` | Gestão de agendamentos provisórios |
+| `src/atendimento/escalation.js` | Escalation após falhas |
+| `src/atendimento/transcricao.js` | Transcrição de áudio (stub) |
+| `src/agenda/google-calendar.js` | Integração Google Calendar |
+| `src/agenda/lembretes.js` | Lembretes 24h antes |
+| `src/dados/pendentes.json` | Pendentes (JSON local) |
+| `src/dados/escalation.json` | Registo de escalation (JSON local) |
+| `scripts/lembretes-diarios.js` | Script de lembretes diários |
+| `test/simulador.js` | Simulador de testes |
+| `.env.exemplo` | Variáveis de ambiente (exemplo) |
+
+Última atualização: 16/10/2026
