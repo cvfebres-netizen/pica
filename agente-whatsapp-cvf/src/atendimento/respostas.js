@@ -27,4 +27,24 @@ module.exports = {
   foraHorario: () => 'Estamos fechados. Registei o pedido, confirmamos de manhã. Urgência: ligue ' + TEL() + '.',
   contactoDireto: (servico) => 'Para ' + servico + ' contacte diretamente a clínica por chamada. Não se agenda aqui.',
   horarioPreferencial: (servico) => 'Para ' + servico + ' os horários preferenciais são início da manhã (10:00) ou início da tarde (14:30). Diga outro horário.',
+  // Formulário passo a passo
+  formularioInicio: () => 'Vou ajudar a marcar. Diga o seu nome:',
+  formularioFinal: (d) => 'Resumo da marcação:\n'
+    + 'Nome: ' + d.nome + '\n'
+    + 'Telefone: ' + d.telefone + '\n'
+    + 'Animal: ' + d.animal + ' (' + d.especie + ')\n'
+    + 'Serviço: ' + d.servico + '\n'
+    + 'Dia/hora: ' + d.dataHora + '\n\n'
+    + 'Responda SIM para confirmar ou NÃO para recomeçar.',
+  // Histórico
+  historicoVazio: () => 'Sem histórico de atendimentos ainda.',
+  historicoLista: (entradas) => 'Últimos atendimentos:\n' + entradas.map((e) =>
+    '• ' + e.dataHora.slice(0, 16) + ' — ' + e.servico + ' — ' + e.animal + ' (' + e.estado + ')'
+  ).join('\n'),
+  // Lista de espera
+  listaEsperaAdicionada: (servico) => 'Ficou na lista de espera para ' + servico + '. Avisamos quando houver vaga.',
+  listaEsperaVazia: () => 'Lista de espera vazia.',
+  listaEsperaLista: (entradas) => 'Lista de espera:\n' + entradas.map((e) =>
+    '• ' + e.servico + ' — ' + e.animal + ' — prefere ' + e.dataPreferida + ' ' + e.horaPreferida
+  ).join('\n')
 };

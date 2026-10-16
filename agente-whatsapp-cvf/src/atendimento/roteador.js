@@ -5,6 +5,9 @@ const R = require('./respostas');
 const pendentes = require('./pendentes');
 const Esc = require('./escalation');
 const servicos = require('./servicos');
+const Form = require('./formulario');
+const Historico = require('./historico');
+const ListaEspera = require('./listaEspera');
 
 function agenda() { return require('../agenda/google-calendar'); }
 function gestorNumero() { return (process.env.NUMERO_GESTOR || '').replace(/\D/g, ''); }
@@ -36,6 +39,15 @@ const RE = {
 };
 
 async function encaminhar({ de, texto }, enviar) {
+  // 0. Cliente a preencher formulário passo a passo — tem prioridade
+  if (Form.temFormularioAberto(de)) {
+    const r = Form.processar({ de, texto });
+    if (r && r.concluiu && r.pendente && enviar && !MESMO_NUMERO) {
+      await enviar(r.pendente.gestorJid, R.avisoGestor(r.pendente));
+    }
+    return r ? r.resposta : null;
+  }
+
   // 1. Gestor a aprovar/recusar um pedido pendente
   if (souGestor(de)) {
     const p = pendentes.ultimoPendente();
@@ -64,7 +76,12 @@ async function encaminhar({ de, texto }, enviar) {
   }
   if (RE.marcar.test(texto)) {
     const dados = extrairPedido(texto);
-    if (!dados.dia || !dados.hora || !dados.animal) return R.pedirDadosMarcar();
+    if (!dados.dia || !dados.hora || !dados.animal) {
+      // Inicia formulário passo a passo
+      const r = Form.processar({ de, texto });
+      if (r) return r.resposta;
+      return R.pedirDadosMarcar();
+    }
     Esc.resetar(de);
     const servico = servicos.detetarServico(texto);
     dados.servico = servico.id;
@@ -84,14 +101,18 @@ async function encaminhar({ de, texto }, enviar) {
     let ocupado = false;
     let conflitoEvento = '';
     try {
-      ev = await agenda().marcarProvisoria({ cliente: de, ...dados, duracaoMin: servico.duracaoMin });
+      ev = await agenda().marcarProvisoria({ cliente: de, ...dados, duracaoMin: servico.duracaoMin, servico: servico.id });
     } catch (e) {
       ev = null;
-      if (e.codigo === 'CONFLITO') { ocupado = true; conflitoEvento = e.evento || ''; }
+      if (e.codigo === 'CONFLITO') {
+        ocupado = true;
+        conflitoEvento = e.evento || '';
+        ListaEspera.adicionar({ cliente: de, servico: servico.id, animal: dados.animal, especie: '', dataPreferida: dados.dia, horaPreferida: dados.hora, contacto: '' });
+      }
     }
     const p = pendentes.criar({ tipo: 'marcar', cliente: de, texto, dados, eventoId: ev ? ev.id : null });
     if (enviar && !MESMO_NUMERO) await enviar(p.gestorJid, R.avisoGestor(p));
-    if (ocupado) return 'Esse horário já está ocupado (' + conflitoEvento + '). Diga outro dia/hora.';
+    if (ocupado) return 'Esse horário já está ocupado (' + conflitoEvento + '). Ficou na lista de espera para ' + servico.id + '. Avisamos quando houver vaga.';
     return ev ? R.pedidoProvisorio(ev) : R.pedidoRegistado('marcação');
   }
   if (RE.horario.test(texto)) { Esc.resetar(de); return R.horario(); }
@@ -123,6 +144,19 @@ async function executarAprovado(p, enviar) {
     return 'Falhou na agenda. Avisei o cliente para ligar.';
   }
   pendentes.aprovar(p.id, ev);
+  // Regista no histórico quando é uma marcação aprovada
+  if (p.tipo === 'marcar' && p.dados) {
+    Historico.registar({
+      cliente: p.cliente,
+      tipo: p.tipo,
+      servico: p.dados.servicoId || p.dados.servico || 'consulta',
+      animal: p.dados.animal || '',
+      especie: p.dados.especie || '',
+      dataHora: p.dados.dia || '',
+      eventoId: ev ? ev.id : null,
+      estado: 'CONFIRMADO'
+    });
+  }
   if (enviar) {
     if (p.tipo === 'marcar') await enviar(p.cliente, R.confirmada(ev));
     if (p.tipo === 'remarcar') await enviar(p.cliente, R.remarcada(ev));

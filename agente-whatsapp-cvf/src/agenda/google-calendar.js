@@ -7,7 +7,21 @@ const path = require('path');
 
 const FICHA_TOKEN = path.join(__dirname, '..', 'dados', 'google-token.json');
 const FUSO = () => process.env.FUSO || 'Europe/Lisbon';
-const CAL_ID = () => process.env.GOOGLE_CALENDAR_ID || 'primary';
+const CAL_ID_POR_DEFECTO = () => process.env.GOOGLE_CALENDAR_ID || 'primary';
+
+/* Múltiplos calendários: mapeia id de serviço → calendar ID do Google Calendar.
+   Preencher no .env: GOOGLE_CAL_CONSULTA, GOOGLE_CAL_VACINA, etc.
+   Se não houver entrada específica, usa o calendário por defeito. */
+function calIdPara(servico) {
+  const chave = 'GOOGLE_CAL_' + (servico || 'consulta').toUpperCase().replace(/[ÁÂÃÀÇÉÊÍÓÔÕÚ]/g, (m) => ({ Á:'A',Â:'A',Ã:'A',À:'A',Ç:'C',É:'E',Ê:'E',Í:'I',Ó:'O',Ô:'O',Õ:'O',Ú:'U' }[m] || m));
+  return process.env[chave] || CAL_ID_POR_DEFECTO();
+}
+
+/* Devolve o calendar ID a usar: parâmetro explícito > serviço > por defeito. */
+function CAL_ID(servicoOuId) {
+  if (servicoOuId) return calIdPara(servicoOuId);
+  return CAL_ID_POR_DEFECTO();
+}
 
 function oauthClient() {
   const { google } = require('googleapis');
@@ -52,10 +66,10 @@ function paraData(dia, hora) {
 
 /* Verifica se o intervalo já tem evento OCUPADO (opaco).
    Provisórios (transparent) não bloqueam — só confirmados contam. */
-async function horarioLivre(inicio, fim) {
+async function horarioLivre(inicio, fim, servico) {
   const cal = await calendario();
   const r = await cal.events.list({
-    calendarId: CAL_ID(),
+    calendarId: CAL_ID(servico),
     timeMin: inicio.toISOString(),
     timeMax: fim.toISOString(),
     singleEvents: true, maxResults: 10
@@ -65,12 +79,12 @@ async function horarioLivre(inicio, fim) {
   return ocupados.length === 0 ? null : ocupados[0];
 }
 
-async function marcarProvisoria({ cliente, animal, motivo, dia, hora, duracaoMin }) {
+async function marcarProvisoria({ cliente, animal, motivo, dia, hora, duracaoMin, servico }) {
   const cal = await calendario();
   const inicio = paraData(dia, hora);
   const dur = Number(duracaoMin) || 30;
   const fim = new Date(inicio.getTime() + dur * 60000);
-  const conflito = await horarioLivre(inicio, fim);
+  const conflito = await horarioLivre(inicio, fim, servico);
   if (conflito) {
     const err = new Error('Horário ocupado: ' + (conflito.summary || ''));
     err.codigo = 'CONFLITO';
@@ -78,24 +92,23 @@ async function marcarProvisoria({ cliente, animal, motivo, dia, hora, duracaoMin
     throw err;
   }
   const r = await cal.events.insert({
-    calendarId: CAL_ID(),
+    calendarId: CAL_ID(servico),
     requestBody: {
       summary: '⏳ PROVISÓRIO — Consulta ' + (animal || '') + ' — ' + (motivo || '').slice(0, 60),
-      description: 'WhatsApp: ' + cliente + '\nMotivo: ' + motivo + '\nEstado: AGUARDA OK DO GESTOR',
+      description: 'WhatsApp: ' + cliente + '\nMotivo: ' + motivo + '\nEstado: AGUARDA OK DO GESTOR\nServiço: ' + (servico || 'consulta'),
       start: { dateTime: inicio.toISOString(), timeZone: FUSO() },
-      end: { dateTime: fim.toISOString(), timeZone: FUSO() },
-      transparency: 'transparent' // não ocupa / mostra-se "livre"
+      end: { dateTime: fim.toISOString(), timeZone: FUSO() }
     }
   });
-  return { id: r.data.id, resumo: (animal || 'consulta') + ' — ' + inicio.toLocaleString('pt-PT') };
+  return { id: r.data.id, resumo: r.data.summary };
 }
 
-async function confirmarEvento(eventId) {
+async function confirmarEvento(eventId, servico) {
   const cal = await calendario();
-  const atual = await cal.events.get({ calendarId: CAL_ID(), eventId });
+  const atual = await cal.events.get({ calendarId: CAL_ID(servico), eventId });
   const titulo = String(atual.data.summary || '').replace(/^⏳ PROVISÓRIO — /, '✅ CONFIRMADO — ');
   const r = await cal.events.patch({
-    calendarId: CAL_ID(), eventId,
+    calendarId: CAL_ID(servico), eventId,
     requestBody: {
       summary: titulo,
       description: (atual.data.description || '') + '\nEstado: CONFIRMADO PELO GESTOR',
@@ -105,21 +118,21 @@ async function confirmarEvento(eventId) {
   return { id: r.data.id, resumo: r.data.summary };
 }
 
-async function apagarEvento(eventId) {
+async function apagarEvento(eventId, servico) {
   const cal = await calendario();
-  await cal.events.delete({ calendarId: CAL_ID(), eventId });
+  await cal.events.delete({ calendarId: CAL_ID(servico), eventId });
   return { id: eventId };
 }
 
-async function marcarConsulta({ cliente, animal, motivo, dia, hora }) {
+async function marcarConsulta({ cliente, animal, motivo, dia, hora, servico }) {
   const cal = await calendario();
   const inicio = paraData(dia, hora);
   const fim = new Date(inicio.getTime() + 30 * 60000);
   const r = await cal.events.insert({
-    calendarId: CAL_ID(),
+    calendarId: CAL_ID(servico),
     requestBody: {
       summary: 'Consulta ' + (animal || '') + ' — ' + (motivo || '').slice(0, 60),
-      description: 'WhatsApp: ' + cliente + '\nMotivo: ' + motivo,
+      description: 'WhatsApp: ' + cliente + '\nMotivo: ' + motivo + '\nServiço: ' + (servico || 'consulta'),
       start: { dateTime: inicio.toISOString(), timeZone: FUSO() },
       end: { dateTime: fim.toISOString(), timeZone: FUSO() }
     }
@@ -127,32 +140,32 @@ async function marcarConsulta({ cliente, animal, motivo, dia, hora }) {
   return { id: r.data.id, resumo: (animal || 'consulta') + ' — ' + inicio.toLocaleString('pt-PT') };
 }
 
-async function _procurar(cliente, texto) {
+async function _procurar(cliente, texto, servico) {
   const cal = await calendario();
   const r = await cal.events.list({
-    calendarId: CAL_ID(), q: texto.split(' ').slice(0, 4).join(' '),
+    calendarId: CAL_ID(servico), q: texto.split(' ').slice(0, 4).join(' '),
     timeMin: new Date().toISOString(), maxResults: 5, singleEvents: true
   });
   return { cal, ev: (r.data.items || [])[0] || null };
 }
 
-async function cancelarConsulta({ cliente, texto }) {
-  const { cal, ev } = await _procurar(cliente, texto);
+async function cancelarConsulta({ cliente, texto, servico }) {
+  const { cal, ev } = await _procurar(cliente, texto, servico);
   if (!ev) return null;
-  await cal.events.delete({ calendarId: CAL_ID(), eventId: ev.id });
+  await cal.events.delete({ calendarId: CAL_ID(servico), eventId: ev.id });
   return { resumo: ev.summary };
 }
 
-async function remarcarConsulta({ cliente, texto }) {
+async function remarcarConsulta({ cliente, texto, servico }) {
   // Formato esperado: "atual ... nova DIA HORA". Divide-se no "para/nova".
   const partes = texto.split(/\bpara\b|\bnova?\b/i);
-  const { cal, ev } = await _procurar(cliente, partes[0] || texto);
+  const { cal, ev } = await _procurar(cliente, partes[0] || texto, servico);
   if (!ev) return null;
   const m = (partes[1] || '').match(/(hoje|amanh[ãa]|\d{1,2}\/\d{1,2})?.*?(\d{1,2}[:h]\d{0,2})/i);
   const inicio = paraData(m?.[1] || '', m?.[2] || '10:00');
   const fim = new Date(inicio.getTime() + 30 * 60000);
   const r = await cal.events.patch({
-    calendarId: CAL_ID(), eventId: ev.id,
+    calendarId: CAL_ID(servico), eventId: ev.id,
     requestBody: {
       start: { dateTime: inicio.toISOString(), timeZone: FUSO() },
       end: { dateTime: fim.toISOString(), timeZone: FUSO() }
@@ -182,5 +195,5 @@ if (process.argv.includes('--ligar')) {
   })();
 }
 
-module.exports = { marcarConsulta, marcarProvisoria, confirmarEvento, apagarEvento, remarcarConsulta, cancelarConsulta, paraData };
+module.exports = { marcarConsulta, marcarProvisoria, confirmarEvento, apagarEvento, remarcarConsulta, cancelarConsulta, paraData, CAL_ID, calIdPara, horarioLivre };
 

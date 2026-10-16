@@ -1,87 +1,6 @@
 [
  {
-  "id": "PEDMVAQ2QBS",
-  "tipo": "marcar",
-  "cliente": "351911111111@s.whatsapp.net",
-  "texto": "quero marcar consulta para o cão Rex amanhã às 10:30",
-  "dados": {
-   "animal": "cão Rex",
-   "dia": "amanhã",
-   "hora": "10:30",
-   "motivo": "quero marcar consulta para o cão Rex amanhã às 10:30"
-  },
-  "eventoId": null,
-  "estado": "RECUSADO",
-  "criadoEm": "2026-10-16T08:45:21.736Z",
-  "gestorJid": "351900000000@s.whatsapp.net"
- },
- {
-  "id": "PEDMVAQ2QC9",
-  "tipo": "cancelar",
-  "cliente": "351911111111@s.whatsapp.net",
-  "texto": "quero cancelar a consulta do Rex de amanhã",
-  "dados": null,
-  "eventoId": null,
-  "estado": "RECUSADO",
-  "criadoEm": "2026-10-16T08:45:21.753Z",
-  "gestorJid": "351900000000@s.whatsapp.net"
- },
- {
-  "id": "PEDMVAQ3ER2",
-  "tipo": "marcar",
-  "cliente": "351911111111@s.whatsapp.net",
-  "texto": "quero marcar consulta para o cão Rex amanhã às 10:30",
-  "dados": {
-   "animal": "cão Rex",
-   "dia": "amanhã",
-   "hora": "10:30",
-   "motivo": "quero marcar consulta para o cão Rex amanhã às 10:30"
-  },
-  "eventoId": null,
-  "estado": "RECUSADO",
-  "criadoEm": "2026-10-16T08:45:53.390Z",
-  "gestorJid": "351900000000@s.whatsapp.net"
- },
- {
-  "id": "PEDMVAQ3ER8",
-  "tipo": "cancelar",
-  "cliente": "351911111111@s.whatsapp.net",
-  "texto": "quero cancelar a consulta do Rex de amanhã",
-  "dados": null,
-  "eventoId": null,
-  "estado": "RECUSADO",
-  "criadoEm": "2026-10-16T08:45:53.396Z",
-  "gestorJid": "351900000000@s.whatsapp.net"
- },
- {
-  "id": "PEDMVAQ4662",
-  "tipo": "marcar",
-  "cliente": "351911111111@s.whatsapp.net",
-  "texto": "quero marcar consulta para o cão Rex amanhã às 10:30",
-  "dados": {
-   "animal": "cão Rex",
-   "dia": "amanhã",
-   "hora": "10:30",
-   "motivo": "quero marcar consulta para o cão Rex amanhã às 10:30"
-  },
-  "eventoId": null,
-  "estado": "RECUSADO",
-  "criadoEm": "2026-10-16T08:46:28.922Z",
-  "gestorJid": "351900000000@s.whatsapp.net"
- },
- {
-  "id": "PEDMVAQ4669",
-  "tipo": "cancelar",
-  "cliente": "351911111111@s.whatsapp.net",
-  "texto": "quero cancelar a consulta do Rex de amanhã",
-  "dados": null,
-  "eventoId": null,
-  "estado": "RECUSADO",
-  "criadoEm": "2026-10-16T08:46:28.929Z",
-  "gestorJid": "351900000000@s.whatsapp.net"
- },
- {
-  "id": "PEDMVAQ52RJ",
+  "id": "PEDMVASF4TC",
   "tipo": "marcar",
   "cliente": "351911111111@s.whatsapp.net",
   "texto": "quero marcar consulta para o cão Rex amanhã às 10:30",
@@ -94,125 +13,18 @@
   },
   "eventoId": null,
   "estado": "RECUSADO",
-  "criadoEm": "2026-10-16T08:47:11.167Z",
+  "criadoEm": "2026-10-16T09:50:59.616Z",
   "gestorJid": "351900000000@s.whatsapp.net"
  },
  {
-  "id": "PEDMVAQ52RO",
+  "id": "PEDMVASF4TH",
   "tipo": "cancelar",
   "cliente": "351911111111@s.whatsapp.net",
   "texto": "quero cancelar a consulta do Rex de amanhã",
   "dados": null,
   "eventoId": null,
   "estado": "RECUSADO",
-  "criadoEm": "2026-10-16T08:47:11.172Z",
+  "criadoEm": "2026-10-16T09:50:59.621Z",
   "gestorJid": "351900000000@s.whatsapp.net"
- },
- {
-  "id": "PEDMVAQ6YN8",
-  "tipo": "marcar",
-  "cliente": "351911111111@s.whatsapp.net",
-  "texto": "quero marcar consulta para o cão Rex amanhã às 10:30",
-  "dados": {
-   "animal": "cão Rex",
-   "dia": "amanhã",
-   "hora": "10:30",
-   "motivo": "quero marcar consulta para o cão Rex amanhã às 10:30",
-   "servico": "consulta"
-  },
-  "eventoId": null,
-  "estado": "RECUSADO",
-  "criadoEm": "2026-10-16T08:48:39.140Z",
-  "gestorJid": "351900000000@s.whatsapp.net"
- },
- {
-  "id": "PEDMVAQ6YNE",
-  "tipo": "cancelar",
-  "cliente": "351911111111@s.whatsapp.net",
-  "texto": "quero cancelar a consulta do Rex de amanhã",
-  "dados": null,
-  "eventoId": null,
-  "estado": "RECUSADO",
-  "criadoEm": "2026-10-16T08:48:39.146Z",
-  "gestorJid": "351900000000@s.whatsapp.net"
- },
- {
-  "id": "PEDMVARIJ07",
-  "tipo": "marcar",
-  "cliente": "351911111111@s.whatsapp.net",
-  "texto": "quero marcar consulta para o cão Rex amanhã às 10:30",
-  "dados": {
-   "animal": "cão Rex",
-   "dia": "amanhã",
-   "hora": "10:30",
-   "motivo": "quero marcar consulta para o cão Rex amanhã às 10:30",
-   "servico": "consulta"
-  },
-  "eventoId": null,
-  "estado": "RECUSADO",
-  "criadoEm": "2026-10-16T09:25:38.359Z",
-  "gestorJid": "351900000000@s.whatsapp.net"
- },
- {
-  "id": "PEDMVARIJ0F",
-  "tipo": "cancelar",
-  "cliente": "351911111111@s.whatsapp.net",
-  "texto": "quero cancelar a consulta do Rex de amanhã",
-  "dados": null,
-  "eventoId": null,
-  "estado": "RECUSADO",
-  "criadoEm": "2026-10-16T09:25:38.367Z",
-  "gestorJid": "351900000000@s.whatsapp.net"
- },
- {
-  "id": "PEDMVARIML9",
-  "tipo": "marcar",
-  "cliente": "351911111111@s.whatsapp.net",
-  "texto": "quero marcar tosquia amanha 10:00 para o cão Rex",
-  "dados": {
-   "animal": "cão Rex",
-   "dia": "amanha",
-   "hora": "10:00",
-   "motivo": "quero marcar tosquia amanha 10:00 para o cão Rex",
-   "servico": "tosquia"
-  },
-  "eventoId": null,
-  "estado": "PENDENTE",
-  "criadoEm": "2026-10-16T09:25:43.005Z",
-  "gestorJid": "551@s.whatsapp.net"
- },
- {
-  "id": "PEDMVARIMLD",
-  "tipo": "marcar",
-  "cliente": "351911111111@s.whatsapp.net",
-  "texto": "quero marcar vacina amanha 10:00 para o cão Rex",
-  "dados": {
-   "animal": "cão Rex",
-   "dia": "amanha",
-   "hora": "10:00",
-   "motivo": "quero marcar vacina amanha 10:00 para o cão Rex",
-   "servico": "vacina"
-  },
-  "eventoId": null,
-  "estado": "PENDENTE",
-  "criadoEm": "2026-10-16T09:25:43.009Z",
-  "gestorJid": "551@s.whatsapp.net"
- },
- {
-  "id": "PEDMVARIMLF",
-  "tipo": "marcar",
-  "cliente": "351911111111@s.whatsapp.net",
-  "texto": "quero marcar consulta amanha 10:00 para o cão Rex",
-  "dados": {
-   "animal": "cão Rex",
-   "dia": "amanha",
-   "hora": "10:00",
-   "motivo": "quero marcar consulta amanha 10:00 para o cão Rex",
-   "servico": "consulta"
-  },
-  "eventoId": null,
-  "estado": "PENDENTE",
-  "criadoEm": "2026-10-16T09:25:43.011Z",
-  "gestorJid": "551@s.whatsapp.net"
  }
 ]

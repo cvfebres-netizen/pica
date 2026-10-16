@@ -63,4 +63,4 @@ function resumo() {
   ).join('\n') + '\nResponda OK ou NÃO.';
 }
 
-module.exports = { criar, ultimoPendente, aprovar, recusar, resumo };
+module.exports = { criar, ultimoPendente, aprovar, recusar, resumo, ler };
