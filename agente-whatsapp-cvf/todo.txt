@@ -10,8 +10,9 @@
 - Estrutura de pastas criada (`src/`, `test/`, `scripts/`, `docs/`, `prompts/`)
 - LEIA-ME com arquitetura e decisão de interligação
 - Stack: Node.js + Baileys (WhatsApp local, sem browser, gratuito) + Google Calendar API v3 + JSON local para pendentes/escalation
-- `package.json` com scripts (`start`, `simular`, `ligar-google`, `lembretes`)
+- `package.json` com scripts (`start`, `simular`, `ligar-google`, `lembretes`, `painel`)
 - `node --check` OK em todos os ficheiros editados/novos
+- Commit e push efetuados (`e2f802b`, branch `main`, sincronizado com `origin/main`)
 
 
 ### Gateway WhatsApp (`src/gateway/baileys-gateway.js`)
@@ -19,6 +20,28 @@
 - Leitura de QR code para emparelhar telemóvel
 - Reconexão automática e deteção de mensagens próprias (evita loop)
 - Modo mononúmero: clínica = gestor (mesmo número `351932290927`); não envia aviso para si mesmo; aceita OK/NÃO de qualquer remetente com pendente
+
+### Formulário passo a passo (`src/atendimento/formulario.js`)
+- FSM: nome → telefone → animal → espécie → serviço → data/hora → confirmação
+- Estado por cliente guardado em `src/dados/formulario-estados.json`
+- Lista de serviços dinâmica (consulta, vacina, desparasitação, banho, tosquia, análises)
+- Quando concluído, cria PENDENTE para aprovação do gestor e avisa o gestor
+- Cliente recebe confirmação de envio e aguarda OK/NÃO
+
+### Histórico de atendimentos (`src/atendimento/historico.js`, `src/dados/historico.json`)
+- Registo de cada agendamento aprovado (cliente, serviço, animal, espécie, data/hora, estado)
+- `Historico.registar()`, `Historico.listar(cliente)`, `Historico.ultimo(cliente)`, `Historico.todos()`
+- Usado pelo painel web e pelo roteador (após aprovação do gestor)
+
+### Lista de espera (`src/atendimento/listaEspera.js`, `src/dados/listaEspera.json`)
+- Quando um horário está ocupado (CONFLITO), o cliente é adicionado à lista de espera
+- `ListaEspera.adicionar()`, `ListaEspera.listar()`, `ListaEspera.atender(id)`, `ListaEspera.proximo(servico)`
+- Usado pelo roteador em caso de conflito de horário
+
+### Múltiplos calendários (`src/agenda/google-calendar.js`)
+- `CAL_ID(servico)` resolve calendar ID por serviço via env `GOOGLE_CAL_CONSULTA`, `GOOGLE_CAL_VACINA`, etc.
+- Fallback para `GOOGLE_CALENDAR_ID` / `primary` se não houver entrada específica
+- Todas as funções (marcarProvisoria, confirmarEvento, apagarEvento, marcarConsulta, cancelarConsulta, remarcarConsulta, horarioLivre) aceitam parâmetro `servico`
 
 ### Roteador e respostas (`src/atendimento/roteador.js`, `respostas.js`)
 - Roteador de intenções: marcar / remarcar / cancelar / dúvida / urgência
@@ -38,10 +61,12 @@
 - Criar/mover/apagar/listar eventos
 - Verificação de conflito (`horarioLivre`): `marcarProvisoria` lança `CONFLITO` se houver evento ocupado
 - Eventos criados como provisórios (pendentes de aprovação do gestor)
+- Suporte a múltiplos calendários por serviço
 
 ### Pendentes e aprovação (`src/atendimento/pendentes.js`, `src/dados/pendentes.json`)
 - Registo de agendamentos provisórios aguardando OK/NÃO do gestor
 - Modo mononúmero: aceita OK/NÃO de qualquer remetente com pendente
+- Exporta `ler()` para uso do painel web
 
 ### Lembretes 24h antes (`src/agenda/lembretes.js`, `scripts/lembretes-diarios.js`)
 - Script `npm run lembretes` envia lembretes do dia seguinte
@@ -53,6 +78,14 @@
 
 ### Áudio (`src/atendimento/transcricao.js`)
 - Stub de transcrição de áudio integrado no gateway (preparado para whisper.cpp local ou OpenAI Whisper API)
+
+### Painel web (`src/web/panel.js`, `npm run painel`)
+- Express na porta 3000 (configurável via `PORT`)
+- GET `/` — dashboard com pendentes e lista de espera
+- GET `/historico` — histórico de atendimentos
+- GET `/lista-espera` — lista de espera com botão "Atendido"
+- POST `/pendente/:id/aprovar` e `/pendente/:id/recusar`
+- HTML simples, sem dependências front-end
 
 ### Simulador e testes (`test/simulador.js`)
 - Simulador sem WhatsApp nem Google Calendar
@@ -70,20 +103,19 @@
 | Item | Status | Bloqueador / Nota |
 |---|---|---|
 | `TELEFONE_CLINICA` no `.env` | 🔴 Bloqueado | Pode estar em falta no `.env.exemplo`; usado por `numeroClinica()` no roteador. Verificar e adicionar se necessário. |
-| Campos do formulário do Google Calendar | 🔴 Bloqueado | Link `calendar.app.google/6ZPswU6ftN2VKuUC9` carrega por JS; não foi possível extrair campos exatos. Necessário para criar `src/atendimento/formulario.js`. |
 | Transcrição de áudio real | 🟡 Pendente | Stub implementado; configurar whisper.cpp local ou OpenAI Whisper API se necessário. |
 
 ## 📋 Necessário fazer (próximos passos imediatos)
 
-1. **Pedir ao utilizador os campos exatos do formulário de agendamento** (nome, email, telefone, animal, espécie, motivo, etc.) e criar `src/atendimento/formulario.js` com recolha passo a passo (FSM: nome → telefone → animal → espécie → serviço → data/hora → confirmação).
-2. **Verificar se `TELEFONE_CLINICA` está definido em `.env.exemplo`**; caso contrário, adicionar para que `MESMO_NUMERO` funcione corretamente.
-3. **Na clínica (com telemóvel Business ao lado):**
-   - `npm install` no PC
+1. **Verificar se `TELEFONE_CLINICA` está definido em `.env.exemplo`**; caso contrário, adicionar para que `MESMO_NUMERO` funcione corretamente.
+2. **Na clínica (com telemóvel Business ao lado):**
+   - `npm install` no PC (nota: `@whiskeysockets/baileys@^7.0.0` no package.json pode precisar de versão válida)
    - Ligar Google Calendar (`npm run ligar-google`)
    - Ler QR com o WhatsApp Business
    - Teste real: marcar + remarcar + cancelar 1 consulta
    - Definir horário, morada e telefone no `.env`
    - Deixar PC ligado no horário de atendimento
+3. **Iniciar o painel web** (`npm run painel`) para o gestor ver e aprovar pendentes no browser.
 4. **Testar `npm run lembretes`** depois de ligar o Google Calendar e configurar no SO cron (diário 09:00).
 5. **Configurar transcrição de áudio real** em `src/atendimento/transcricao.js` (whisper.cpp local ou OpenAI Whisper API) se necessário.
 6. **Adicionar testes ao simulador** para contacto direto (cirurgia) e horários preferenciais (banho/tosquia).
@@ -93,12 +125,7 @@
 
 ## 🚀 Pode ainda ser implementado (ideias futuras / roadmap)
 
-- Formulário passo a passo (`src/atendimento/formulario.js`) com campos extraídos do Google Calendar
-- Histórico de atendimentos por cliente (arquivo JSON por telefone)
-- Lista de espera quando não há horários disponíveis
 - Reagendamento automático sugerido pelo bot em caso de conflito
-- Múltiplos calendários (um por veterinário/serviço)
-- Painel web simples para o gestor ver e aprovar pendentes
 - Integração com ficheiro de clientes existente da clínica
 - Notificações de confirmação de presença (2h antes)
 - Suporte a múltiplos idiomas (PT-PT / EN)
@@ -118,15 +145,22 @@
 |---|---|
 | `src/index.js` | Ponto de entrada |
 | `src/gateway/baileys-gateway.js` | Conexão WhatsApp (Baileys) |
-| `src/atendimento/roteador.js` | Roteador de intenções |
+| `src/atendimento/roteador.js` | Roteador de intenções + integração formulário/histórico/lista-espera |
 | `src/atendimento/respostas.js` | Textos de resposta PT-PT |
 | `src/atendimento/servicos.js` | Tabela de serviços e regras de negócio |
+| `src/atendimento/formulario.js` | FSM passo a passo de agendamento |
+| `src/atendimento/historico.js` | Histórico de atendimentos por cliente |
+| `src/atendimento/listaEspera.js` | Lista de espera quando horário está ocupado |
 | `src/atendimento/pendentes.js` | Gestão de agendamentos provisórios |
 | `src/atendimento/escalation.js` | Escalation após falhas |
 | `src/atendimento/transcricao.js` | Transcrição de áudio (stub) |
-| `src/agenda/google-calendar.js` | Integração Google Calendar |
+| `src/agenda/google-calendar.js` | Integração Google Calendar (múltiplos calendários) |
 | `src/agenda/lembretes.js` | Lembretes 24h antes |
+| `src/web/panel.js` | Painel web Express para o gestor |
 | `src/dados/pendentes.json` | Pendentes (JSON local) |
+| `src/dados/historico.json` | Histórico (JSON local) |
+| `src/dados/listaEspera.json` | Lista de espera (JSON local) |
+| `src/dados/formulario-estados.json` | Estados do formulário (JSON local) |
 | `src/dados/escalation.json` | Registo de escalation (JSON local) |
 | `scripts/lembretes-diarios.js` | Script de lembretes diários |
 | `test/simulador.js` | Simulador de testes |
