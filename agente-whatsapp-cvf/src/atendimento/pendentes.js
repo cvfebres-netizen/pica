@@ -1,9 +1,11 @@
 /* Fila de pedidos pendentes de aprovação do gestor.
-   Guardada em JSON local — sem base de dados paga. */
+   Guardada em JSON local — sem base de dados paga.
+   TTL: pendentes expiram após 7 dias para não acumular lixo. */
 const fs = require('fs');
 const path = require('path');
 
 const FICHA = path.join(__dirname, '..', 'dados', 'pendentes.json');
+const PENDENTE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 dias
 
 function ler() {
   try {
@@ -13,13 +15,26 @@ function ler() {
 }
 function guardar(lista) { fs.writeFileSync(FICHA, JSON.stringify(lista, null, 1)); }
 
+function agora() { return Date.now(); }
+
+function limparExpirados(lista) {
+  const agoraMs = agora();
+  const filtrada = lista.filter((p) => {
+    const ts = p.criadoEm ? new Date(p.criadoEm).getTime() : 0;
+    return agoraMs - ts <= PENDENTE_TTL_MS;
+  });
+  if (filtrada.length !== lista.length) guardar(filtrada);
+  return filtrada;
+}
+
 function gestorJid() {
   const n = (process.env.NUMERO_GESTOR || '').replace(/\D/g, '');
   return n ? n + '@s.whatsapp.net' : '551@s.whatsapp.net';
 }
 
 function criar({ tipo, cliente, texto, dados, eventoId }) {
-  const lista = ler();
+  let lista = ler();
+  lista = limparExpirados(lista);
   const p = {
     id: 'PED' + Date.now().toString(36).toUpperCase(),
     tipo, cliente, texto,
@@ -35,8 +50,10 @@ function criar({ tipo, cliente, texto, dados, eventoId }) {
 }
 
 function ultimoPendente() {
-  const lista = ler().filter((p) => p.estado === 'PENDENTE');
-  return lista[lista.length - 1] || null;
+  let lista = ler();
+  lista = limparExpirados(lista);
+  const pendentes = lista.filter((p) => p.estado === 'PENDENTE');
+  return pendentes[pendentes.length - 1] || null;
 }
 
 function aprovar(id, ev) {
@@ -56,9 +73,11 @@ function recusar(id) {
 }
 
 function resumo() {
-  const lista = ler().filter((p) => p.estado === 'PENDENTE');
-  if (!lista.length) return 'Sem pendentes.';
-  return 'Pendentes:\n' + lista.map((p) =>
+  let lista = ler();
+  lista = limparExpirados(lista);
+  const pendentes = lista.filter((p) => p.estado === 'PENDENTE');
+  if (!pendentes.length) return 'Sem pendentes.';
+  return 'Pendentes:\n' + pendentes.map((p) =>
     '• ' + p.id + ' | ' + p.tipo + ' | ' + (p.dados ? (p.dados.animal + ' ' + p.dados.dia + ' ' + p.dados.hora) : p.texto.slice(0, 60))
   ).join('\n') + '\nResponda OK ou NÃO.';
 }

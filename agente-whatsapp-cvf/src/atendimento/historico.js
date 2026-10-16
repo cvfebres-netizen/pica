@@ -1,10 +1,12 @@
 /* Histórico de atendimentos por cliente.
    Guardado em src/dados/historico.json — sem base de dados paga.
-   Cada entrada: { cliente, tipo, servico, animal, especie, dataHora, eventoId, estado, criadoEm } */
+   Cada entrada: { cliente, tipo, servico, animal, especie, dataHora, eventoId, estado, criadoEm }
+   TTL: entradas com mais de 2 anos são removidas para não crescer indefinidamente. */
 const fs = require('fs');
 const path = require('path');
 
 const FICHA = path.join(__dirname, '..', 'dados', 'historico.json');
+const HISTORICO_TTL_MS = 2 * 365 * 24 * 60 * 60 * 1000; // 2 anos
 
 function ler() {
   try {
@@ -16,9 +18,22 @@ function guardar(lista) { fs.writeFileSync(FICHA, JSON.stringify(lista, null, 1)
 
 function chaveCliente(jid) { return String(jid).replace(/\D/g, ''); }
 
+function agora() { return Date.now(); }
+
+function limparExpirados(lista) {
+  const agoraMs = agora();
+  const filtrada = lista.filter((e) => {
+    const ts = e.criadoEm ? new Date(e.criadoEm).getTime() : 0;
+    return agoraMs - ts <= HISTORICO_TTL_MS;
+  });
+  if (filtrada.length !== lista.length) guardar(filtrada);
+  return filtrada;
+}
+
 /* Regista um atendimento concluído (após aprovação do gestor). */
 function registar({ cliente, tipo, servico, animal, especie, dataHora, eventoId, estado }) {
-  const lista = ler();
+  let lista = ler();
+  lista = limparExpirados(lista);
   const entrada = {
     id: 'HIST' + Date.now().toString(36).toUpperCase(),
     cliente: cliente,

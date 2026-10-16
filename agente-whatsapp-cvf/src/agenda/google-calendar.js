@@ -195,5 +195,5 @@ if (process.argv.includes('--ligar')) {
   })();
 }
 
-module.exports = { marcarConsulta, marcarProvisoria, confirmarEvento, apagarEvento, remarcarConsulta, cancelarConsulta, paraData, CAL_ID, calIdPara, horarioLivre };
+module.exports = { marcarConsulta, marcarProvisoria, confirmarEvento, apagarEvento, remarcarConsulta, cancelarConsulta, paraData, CAL_ID, calIdPara, horarioLivre, calendario, FUSO };
 

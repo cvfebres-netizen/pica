@@ -1,7 +1,8 @@
 /* Formulário de agendamento passo a passo (FSM).
    Fluxo: nome → telefone → animal → espécie → serviço → data/hora → confirmação → concluído.
    Estado por cliente guardado em src/dados/formulario-estados.json.
-   Quando concluído, cria um PENDENTE para aprovação do gestor. */
+   Quando concluído, cria um PENDENTE para aprovação do gestor.
+   TTL: estados de formulário expiram após 30 min de inatividade para não bloquear o cliente para sempre. */
 const fs = require('fs');
 const path = require('path');
 const servicos = require('./servicos');
@@ -13,6 +14,8 @@ const ETAPAS = [
   'nome', 'telefone', 'animal', 'especie', 'servico', 'dataHora', 'confirmacao'
 ];
 
+const TTL_MS = 30 * 60 * 1000; // 30 minutos de inatividade
+
 function ler() {
   try {
     if (!fs.existsSync(FICHA)) return {};
@@ -23,8 +26,24 @@ function guardar(estados) { fs.writeFileSync(FICHA, JSON.stringify(estados, null
 
 function chaveCliente(jid) { return String(jid).replace(/\D/g, ''); }
 
+function agora() { return Date.now(); }
+
+function limparExpirados(estados) {
+  const agoraMs = agora();
+  let mudou = false;
+  for (const k of Object.keys(estados)) {
+    const est = estados[k];
+    if (agoraMs - (est.ts || 0) > TTL_MS) {
+      delete estados[k];
+      mudou = true;
+    }
+  }
+  if (mudou) guardar(estados);
+  return estados;
+}
+
 function estadoInicial() {
-  return { etapa: 'nome', dados: {} };
+  return { etapa: 'nome', dados: {}, ts: agora() };
 }
 
 function listaServicos() {
@@ -36,7 +55,8 @@ function listaServicos() {
 
 function processar({ de, texto }) {
   const c = chaveCliente(de);
-  const estados = ler();
+  let estados = ler();
+  estados = limparExpirados(estados);
   let est = estados[c];
 
   if (!est) {
@@ -49,6 +69,8 @@ function processar({ de, texto }) {
     return { resposta: 'Vamos preencher os dados da consulta. Como se chama (o(a) dono(a))?', concluiu: false, pendente: null };
   }
 
+  // Atualiza timestamp de atividade
+  est.ts = agora();
   return avanca(est, texto, c, de, estados);
 }
 
@@ -61,41 +83,49 @@ function avanca(est, texto, c, de, estados) {
   if (etapa === 'nome') {
     d.nome = t;
     est.etapa = 'telefone';
+    est.ts = agora();
     guardar(estados);
     return { resposta: 'Qual o seu telefone de contacto?', concluiu: false, pendente: null };
   }
   if (etapa === 'telefone') {
     d.telefone = t;
     est.etapa = 'animal';
+    est.ts = agora();
     guardar(estados);
     return { resposta: 'Qual o nome do animal?', concluiu: false, pendente: null };
   }
   if (etapa === 'animal') {
     d.animal = t;
     est.etapa = 'especie';
+    est.ts = agora();
     guardar(estados);
     return { resposta: 'Qual a espécie do animal? (cão, gato, outro)', concluiu: false, pendente: null };
   }
   if (etapa === 'especie') {
     d.especie = t;
     est.etapa = 'servico';
+    est.ts = agora();
     guardar(estados);
     return { resposta: listaServicos(), concluiu: false, pendente: null };
   }
   if (etapa === 'servico') {
     const s = servicos.detetarServico(t);
     if (!s || s.agendamentoDireto === false) {
+      est.ts = agora();
+      guardar(estados);
       return { resposta: 'Não reconheci esse serviço. ' + listaServicos(), concluiu: false, pendente: null };
     }
     d.servico = s.id;
     d.duracaoMin = s.duracaoMin;
     est.etapa = 'dataHora';
+    est.ts = agora();
     guardar(estados);
     return { resposta: 'Qual dia e hora prefere? (ex: amanhã 10:30 ou 12/05 14h)', concluiu: false, pendente: null };
   }
   if (etapa === 'dataHora') {
     d.dataHora = t;
     est.etapa = 'confirmacao';
+    est.ts = agora();
     guardar(estados);
     return {
       resposta: 'Confirma os dados:\n'
@@ -141,6 +171,8 @@ function avanca(est, texto, c, de, estados) {
       guardar(estados);
       return { resposta: 'Recomeçamos. Como se chama (o(a) dono(a))?', concluiu: false, pendente: null };
     }
+    est.ts = agora();
+    guardar(estados);
     return { resposta: 'Responda SIM para confirmar ou NÃO para recomeçar.', concluiu: false, pendente: null };
   }
 
@@ -168,4 +200,4 @@ function cancelar(jid) {
   return false;
 }
 
-module.exports = { processar, temFormularioAberto, estado, cancelar, ETAPAS };
+module.exports = { processar, temFormularioAberto, estado, cancelar, ETAPAS, TTL_MS };
