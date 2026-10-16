@@ -87,9 +87,10 @@
 - POST `/pendente/:id/aprovar` e `/pendente/:id/recusar`
 - HTML simples, sem dependências front-end
 
-### Simulador e testes (`test/simulador.js`)
-- Simulador sem WhatsApp nem Google Calendar
-- 11/11 testes OK (inclui escalation, conflito, contacto direto, horários preferenciais)
+### Simulador e testes (`test/simulador.js`, `test/stress-test.js`)
+- Simulador sem WhatsApp nem Google Calendar: 11/11 testes OK
+- Stress test: 375 asserts por execução, 3 execuções = 1125 asserts totais, 0 falhas
+- Cenários cobertos: mensagens válidas, nonsense/escalation, gestor aprova/recusa, loop de bloqueio (10 nonsense seguidos), formulário passo a passo, NÃO na confirmação, serviços (cirurgia vs consulta), horários preferenciais banho/tosquia, urgência, casos extremos (strings vazias, emojis, 500 chars), histórico, lista de espera, múltiplos clientes interleave
 
 ### Scripts de apoio
 - `scripts/instalar.bat` (instalação no PC da clínica)
