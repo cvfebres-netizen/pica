@@ -1,0 +1,17 @@
+{
+  "name": "agente-whatsapp-cvf",
+  "version": "1.0.0",
+  "description": "Agente WhatsApp Business para clinica veterinaria — atendimento + agendamentos + Google Calendar. 100% gratuito.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "ligar-google": "node src/agenda/google-calendar.js --ligar",
+    "lembretes": "node scripts/lembretes-diarios.js",
+    "teste": "node test/simulador.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^7.0.0",
+    "googleapis": "^140.0.0",
+    "dotenv": "^16.4.5"
+  }
+}

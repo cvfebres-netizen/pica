@@ -1,0 +1,28 @@
+# Estado — Agente WhatsApp CVF
+
+## Estado geral: ESTRUTURA PRONTA, FALTA LIGAR
+
+## Feito
+- [x] Estrutura de pastas criada
+- [x] LEIA-ME com arquitetura e decisão de interligação
+- [x] Gateway Baileys (QR local, sem browser, gratuito)
+- [x] Roteador de intenções simples (marcar/remarcar/cancelar/dúvida/urgência)
+- [x] Respostas curtas PT-PT sem rodeios
+- [x] Módulo Google Calendar (criar/mover/apagar/listar)
+- [x] Prompt do agente de atendimento
+- [x] Simulador de teste sem WhatsApp nem Google
+- [x] Script de instalação para o PC
+
+## Falta (na clínica, com o telemóvel Business ao lado)
+- [ ] `npm install` no PC
+- [ ] Ligar Google Calendar (`npm run ligar-google`)
+- [ ] Ler QR com o WhatsApp Business
+- [ ] Teste real: marcar + remarcar + cancelar 1 consulta
+- [ ] Definir horário, morada e telefone no `.env`
+- [ ] Deixar PC ligado no horário de atendimento
+
+## Não fazer
+- [ ] NÃO usar Cloud API paga nem BSP
+- [ ] NÃO fazer difusão/spam (risco de ban)
+- [ ] NÃO diagnosticar doenças (só agenda e informa)
+- [ ] NÃO expor `.env` nem `auth_info/` no git
