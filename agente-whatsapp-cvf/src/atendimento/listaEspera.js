@@ -62,7 +62,8 @@ function listar() {
 
 /* Remove uma entrada da fila (quando é atendida). */
 function remover(id) {
-  const lista = ler();
+  let lista = ler();
+  lista = limparExpirados(lista);
   const idx = lista.findIndex((e) => e.id === id);
   if (idx === -1) return null;
   const removida = lista.splice(idx, 1)[0];

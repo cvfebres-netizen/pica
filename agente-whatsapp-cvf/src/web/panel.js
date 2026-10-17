@@ -12,10 +12,32 @@ const pendentes = require('../atendimento/pendentes');
 const Historico = require('../atendimento/historico');
 const ListaEspera = require('../atendimento/listaEspera');
 const R = require('../atendimento/respostas');
+const logger = require('../monitor/logger');
+const metricas = require('../monitor/metricas');
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+/* Autenticação básica simples: usuário/senha via .env (PAINEL_USER, PAINEL_PASS).
+   Se não estiverem definidos, o painel fica aberto (modo desenvolvimento local). */
+const PAINEL_USER = process.env.PAINEL_USER || null;
+const PAINEL_PASS = process.env.PAINEL_PASS || null;
+
+function autenticado(req, res, next) {
+  if (!PAINEL_USER || !PAINEL_PASS) return next(); // sem credenciais definidas → modo aberto
+  const auth = req.headers.authorization;
+  if (!auth) {
+    res.set('WWW-Authenticate', 'Basic realm="Painel Clínica"');
+    return res.status(401).send('Autenticação necessária.');
+  }
+  const base64 = auth.replace(/^Basic\s+/, '');
+  const creds = Buffer.from(base64, 'base64').toString('utf-8');
+  const [user, pass] = creds.split(':');
+  if (user === PAINEL_USER && pass === PAINEL_PASS) return next();
+  res.status(403).send('Acesso negado.');
+}
+app.use(autenticado);
 
 function htmlCabecalho(titulo) {
   return '<!DOCTYPE html><html lang="pt-PT"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
@@ -40,6 +62,7 @@ function botaoAcao(id, tipo) {
 // Dashboard: pendentes + lista de espera
 app.get('/', (req, res) => {
   const lista = pendentes.resumo().split('\n').filter(Boolean);
+
   const espera = ListaEspera.listar();
   let pendentesHtml = '<ul>';
   const todas = pendentes.ler ? pendentes.ler() : [];
@@ -96,14 +119,30 @@ app.post('/lista-espera/atender/:id', (req, res) => {
 
 // Aprovar pendente
 app.post('/pendente/:id/aprovar', (req, res) => {
-  pendentes.aprovar(req.params.id, { resumo: 'Aprovado via painel web' });
+  pendentes.aprovar(req.params.id, { resumo: 'Aprovado via painel web' }, 'painel_web');
   res.redirect('/');
 });
 
 // Recusar pendente
 app.post('/pendente/:id/recusar', (req, res) => {
-  pendentes.recusar(req.params.id);
+  pendentes.recusar(req.params.id, 'painel_web');
   res.redirect('/');
+});
+
+// Métricas (para monitorização simples)
+app.get('/metrics', (req, res) => {
+  const m = metricas.resumo();
+  let linhas = '<table><tr><th>Dia</th><th>Métrica</th><th>Valor</th></tr>';
+  for (const dia of Object.keys(m).sort()) {
+    for (const k of Object.keys(m[dia])) {
+      linhas += '<tr><td>' + dia + '</td><td>' + k + '</td><td>' + m[dia][k] + '</td></tr>';
+    }
+  }
+  linhas += '</table>';
+  res.send(htmlCabecalho('Métricas')
+    + '<nav><a href=\"/\">Dashboard</a> | <a href=\"/historico\">Histórico</a> | <a href=\"/lista-espera\">Lista de Espera</a> | <a href=\"/metrics\">Métricas</a></nav>'
+    + '<h2>Métricas por dia</h2>' + (Object.keys(m).length ? linhas : '<p>Sem métricas ainda.</p>')
+    + htmlRodape());
 });
 
 function iniciar(porta) {
@@ -113,3 +152,6 @@ function iniciar(porta) {
 }
 
 module.exports = { iniciar, app };
+
+
+

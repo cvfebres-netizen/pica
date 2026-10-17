@@ -56,18 +56,29 @@ function ultimoPendente() {
   return pendentes[pendentes.length - 1] || null;
 }
 
-function aprovar(id, ev) {
-  const lista = ler();
+function aprovar(id, ev, aprovadoPor) {
+  let lista = ler();
+  lista = limparExpirados(lista);
   const p = lista.find((x) => x.id === id);
-  if (p) { p.estado = 'APROVADO'; p.evento = ev ? ev.resumo : ''; }
+  if (p) {
+    p.estado = 'APROVADO';
+    p.evento = ev ? ev.resumo : '';
+    p.aprovadoEm = new Date().toISOString();
+    p.aprovadoPor = aprovadoPor || null;
+  }
   guardar(lista);
   return p;
 }
 
-function recusar(id) {
-  const lista = ler();
+function recusar(id, recusadoPor) {
+  let lista = ler();
+  lista = limparExpirados(lista);
   const p = lista.find((x) => x.id === id);
-  if (p) p.estado = 'RECUSADO';
+  if (p) {
+    p.estado = 'RECUSADO';
+    p.recusadoEm = new Date().toISOString();
+    p.recusadoPor = recusadoPor || null;
+  }
   guardar(lista);
   return p;
 }

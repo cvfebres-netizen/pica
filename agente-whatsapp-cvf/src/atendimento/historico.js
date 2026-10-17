@@ -64,6 +64,6 @@ function ultimo(cliente) {
 }
 
 /* Devolve todos os atendimentos (para o painel web). */
-function todos() { return ler(); }
+function todos() { return limparExpirados(ler()); }
 
 module.exports = { registar, listar, ultimo, todos };

@@ -1,8 +1,12 @@
 /* Gateway WhatsApp via Baileys: QR local, sem browser, gratuito para sempre.
    Liga a CONTA BUSINESS NORMAL do telemóvel (Aparelhos ligados).
-   Inclui: rate limiting por número, backoff na reconexão, validação de tamanho de mensagem. */
+   Inclui: rate limiting por número, backoff na reconexão, validação de tamanho de mensagem,
+   deduplicação de mensagens, try/catch no roteador, persistência de tentativas de reconexão. */
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+const fs = require('fs');
 const path = require('path');
+const logger = require('../monitor/logger');
+const metricas = require('../monitor/metricas');
 
 const MAX_MSG_LEN = 4000;
 const RATE_LIMIT_MAX = 20;      // max mensagens por minuto por número
@@ -10,14 +14,15 @@ const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minuto
 const RECONNECT_BASE_DELAY = 5000;   // 5s inicial
 const RECONNECT_MAX_DELAY = 60 * 1000; // 60s máximo
 const MAX_RECONNECT_ATTEMPTS = 10;
+const FICHA_RECONNECT = path.join(__dirname, '..', 'dados', 'gateway-state.json');
 
 const rateMap = new Map(); // numero -> { timestamps: [], blockedUntil: 0 }
+const mensagensProcessadas = new Map(); // messageId -> timestamp
 
 function podeEnviar(numero) {
   const agora = Date.now();
   const entrada = rateMap.get(numero) || { timestamps: [], blockedUntil: 0 };
   if (agora < entrada.blockedUntil) return false;
-  // remove timestamps fora da janela
   entrada.timestamps = entrada.timestamps.filter((ts) => agora - ts < RATE_LIMIT_WINDOW);
   if (entrada.timestamps.length >= RATE_LIMIT_MAX) {
     entrada.blockedUntil = agora + RATE_LIMIT_WINDOW;
@@ -29,11 +34,37 @@ function podeEnviar(numero) {
   return true;
 }
 
+/* Deduplicação: ignora mensagens já processadas nos últimos 5 minutos. */
+function jaProcessada(messageId) {
+  if (!messageId) return false;
+  const agora = Date.now();
+  const ts = mensagensProcessadas.get(messageId);
+  if (ts && agora - ts < 5 * 60 * 1000) return true;
+  mensagensProcessadas.set(messageId, agora);
+  for (const [id, t] of mensagensProcessadas.entries()) {
+    if (agora - t > 10 * 60 * 1000) mensagensProcessadas.delete(id);
+  }
+  return false;
+}
+
+function lerReconnectState() {
+  try {
+    if (!fs.existsSync(FICHA_RECONNECT)) return { attempts: 0 };
+    return JSON.parse(fs.readFileSync(FICHA_RECONNECT, 'utf8'));
+  } catch (e) { return { attempts: 0 }; }
+}
+function guardarReconnectState(state) {
+  try { fs.writeFileSync(FICHA_RECONNECT, JSON.stringify(state)); } catch (e) {}
+}
+
 async function ligarGateway(aoReceber) {
   const pastaAuth = path.join(__dirname, '..', 'dados', 'auth_info');
   const { state, saveCreds } = await useMultiFileAuthState(pastaAuth);
 
-  let reconnectAttempts = 0;
+  const statePersistido = lerReconnectState();
+  let reconnectAttempts = statePersistido.attempts || 0;
+
+  const salvarAttempts = () => guardarReconnectState({ attempts: reconnectAttempts });
 
   const conectar = async () => {
     const sock = makeWASocket({ auth: state, printQRInTerminal: true });
@@ -42,78 +73,92 @@ async function ligarGateway(aoReceber) {
     sock.ev.on('connection.update', (u) => {
       const { connection, lastDisconnect } = u;
       if (connection === 'open') {
-        console.log('WhatsApp ligado. Pronto a atender.');
+        logger.info('WhatsApp ligado. Pronto a atender.');
         reconnectAttempts = 0;
+        salvarAttempts();
       }
       if (connection === 'close') {
         const codigo = lastDisconnect?.error?.output?.statusCode;
         const retomar = codigo !== DisconnectReason.loggedOut;
-        console.log('Ligação fechada. Retomar:', retomar);
+        logger.info('Ligação fechada. Retomar: ' + retomar);
         if (!retomar) {
-          console.log('Sessão terminada. Apague src/dados/auth_info e leia novo QR.');
+          logger.error('Sessão terminada. Apague src/dados/auth_info e leia novo QR.');
           return;
         }
         if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-          console.log('Máximo de tentativas de reconexão atingido. Pare manualmente.');
+          logger.error('Máximo de tentativas de reconexão atingido. Pare manualmente.');
           return;
         }
         reconnectAttempts++;
-        // backoff exponencial: 5s, 10s, 20s, 40s... limitado a 60s
+        salvarAttempts();
         const delay = Math.min(RECONNECT_BASE_DELAY * Math.pow(2, reconnectAttempts - 1), RECONNECT_MAX_DELAY);
-        console.log('Reconectando em ' + (delay / 1000) + 's (tentativa ' + reconnectAttempts + '/' + MAX_RECONNECT_ATTEMPTS + ')...');
+        logger.warn('Reconectando em ' + (delay / 1000) + 's (tentativa ' + reconnectAttempts + '/' + MAX_RECONNECT_ATTEMPTS + ')...');
         setTimeout(() => conectar(), delay);
       }
     });
 
     sock.ev.on('messages.upsert', async ({ messages }) => {
       const enviar = async (para, texto) => {
-        // aceita número simples ou JID completo
         const jid = para.includes('@') ? para : para.replace(/\D/g, '') + '@s.whatsapp.net';
-        await sock.sendMessage(jid, { text: texto });
-        console.log('>>', jid, ':', texto.slice(0, 120));
+        try {
+          await sock.sendMessage(jid, { text: texto });
+          metricas.inc('mensagens_enviadas');
+          logger.info('>> ' + jid + ' : ' + texto.slice(0, 120));
+        } catch (e) {
+          logger.error('Falha a enviar para ' + jid + ': ' + e.message);
+          metricas.inc('erros_envio');
+        }
       };
       const Transcricao = require('../atendimento/transcricao');
       for (const m of messages) {
-        // gestor incluído: o OK/NÃO dele chega como mensagem recebida normal
         if (!m.message || m.key.fromMe) continue;
+        if (jaProcessada(m.key.id)) continue;
         let texto = m.message.conversation
           || m.message.extendedTextMessage?.text || '';
-        // áudio / voz: tenta transcrever para tratar como texto do cliente
         if (!texto.trim() && (m.message.audio || m.message.voiceMessage)) {
           try {
             const buffer = await sock.downloadMediaMessage(m);
             const transcrito = await Transcricao.transcreverAudio(buffer);
             if (transcrito) {
               texto = transcrito;
-              console.log('<< áudio transcrito:', texto.slice(0, 120));
+              logger.info('<< áudio transcrito: ' + texto.slice(0, 120));
             } else {
               await enviar(m.key.remoteJid, 'Não consegui ouvir o áudio. Pode escrever o que precisa?');
               continue;
             }
           } catch (e) {
-            console.log('Falha a transcrever áudio:', e.message);
+            logger.error('Falha a transcrever áudio: ' + e.message);
             await enviar(m.key.remoteJid, 'Não consegui ouvir o áudio. Pode escrever o que precisa?');
             continue;
           }
         }
         if (!texto.trim()) continue;
-        // validação de tamanho
         if (texto.length > MAX_MSG_LEN) {
           await enviar(m.key.remoteJid, 'Mensagem demasiado longa. Resuma em menos de ' + MAX_MSG_LEN + ' caracteres.');
           continue;
         }
         const de = m.key.remoteJid;
         const numero = de.replace(/\D/g, '');
-        // rate limiting
         if (!podeEnviar(numero)) {
-          console.log('Rate limit excedido para ' + numero + '. Ignorando mensagem.');
+          logger.warn('Rate limit excedido para ' + numero + '. Ignorando mensagem.');
           await enviar(de, 'Está a enviar mensagens demasiado rápido. Aguarde um momento.');
           continue;
         }
-        console.log('<<', de, ':', texto.slice(0, 120));
-        const resposta = await aoReceber({ de, texto: texto.trim() }, enviar);
-        if (resposta) await enviar(de, resposta);
-        await new Promise((r) => setTimeout(r, 1500)); // ritmo humano, anti-ban
+        metricas.inc('mensagens_recebidas');
+        logger.info('<< ' + de + ' : ' + texto.slice(0, 120));
+        try {
+          const resposta = await aoReceber({ de, texto: texto.trim() }, enviar);
+          if (resposta) await enviar(de, resposta);
+        } catch (e) {
+          logger.error('Falha no roteador para ' + de + ': ' + e.message);
+          metricas.inc('erros_roteador');
+          try {
+            await enviar(de, 'Tivemos uma falha interna. Ligue para ' + (process.env.TELEFONE_CLINICA || 'a clínica') + '.');
+          } catch (e2) {
+            logger.error('Falha a enviar mensagem de erro: ' + e2.message);
+          }
+        }
+        await new Promise((r) => setTimeout(r, 1500));
       }
     });
 

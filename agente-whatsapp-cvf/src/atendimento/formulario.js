@@ -88,7 +88,15 @@ function avanca(est, texto, c, de, estados) {
     return { resposta: 'Qual o seu telefone de contacto?', concluiu: false, pendente: null };
   }
   if (etapa === 'telefone') {
-    d.telefone = t;
+    // Validação de número português: 9 dígitos, com ou sem 351 à frente
+    const telLimpo = t.replace(/[^\d]/g, '');
+    const telValido = /^3519\d{8}$/.test(telLimpo) || /^9\d{8}$/.test(telLimpo);
+    if (!telValido) {
+      est.ts = agora();
+      guardar(estados);
+      return { resposta: 'Telefone inválido. Use 9 dígitos (ex: 912345678 ou 351912345678). Qual o seu telefone?', concluiu: false, pendente: null };
+    }
+    d.telefone = telLimpo.startsWith('351') ? telLimpo : '351' + telLimpo;
     est.etapa = 'animal';
     est.ts = agora();
     guardar(estados);

@@ -13,17 +13,27 @@
 - `package.json` com scripts (`start`, `simular`, `ligar-google`, `lembretes`, `painel`)
 - `node --check` OK em todos os ficheiros editados/novos
 - Commit e push efetuados (`e2f802b`, branch `main`, sincronizado com `origin/main`)
+- **Melhorias de blindagem aplicadas (try/catch, deduplicação, persistência, validação, logs, métricas):**
+  - `src/monitor/logger.js` — novo: logger para ficheiro (`src/logs/app-YYYY-MM-DD.log`) + consola (níveis info/warn/error)
+  - `src/monitor/metricas.js` — novo: contadores simples em `src/dados/metricas.json` (por dia: mensagens_recebidas, mensagens_enviadas, erros_envio, erros_roteador)
+  - `src/index.js` — usa `logger` em vez de `console.log`/`console.error`
 
 
 ### Gateway WhatsApp (`src/gateway/baileys-gateway.js`)
 - Conexão Baileys com autenticação local (sem browser)
 - Leitura de QR code para emparelhar telemóvel
-- Reconexão automática e deteção de mensagens próprias (evita loop)
-- Modo mononúmero: clínica = gestor (mesmo número `351932290927`); não envia aviso para si mesmo; aceita OK/NÃO de qualquer remetente com pendente
+- Reconexão automática com backoff exponencial (5s→60s, max 10 tentativas) e persistência de `reconnectAttempts` entre reinícios (`src/dados/gateway-state.json`)
+- Rate limiting (20 msg/min por número) com bloqueio de 1 min ao exceder
+- Validação de tamanho de mensagem (máx. 4000 chars)
+- **Deduplicação de mensagens por `message.id` (TTL 5 min, limpeza aos 10 min)**
+- **try/catch em torno de `aoReceber`: falha no roteador não derruba o gateway, envia mensagem de erro ao cliente**
+- **Logs para ficheiro via `src/monitor/logger.js`**
+- **Métricas via `src/monitor/metricas.js`**
 
 ### Formulário passo a passo (`src/atendimento/formulario.js`)
 - FSM: nome → telefone → animal → espécie → serviço → data/hora → confirmação
 - Estado por cliente guardado em `src/dados/formulario-estados.json`
+- **Validação de telefone português: 9 dígitos, com ou sem prefixo 351 (regex `^3519\d{8}$` ou `^9\d{8}$`); normaliza para formato 3519XXXXXXX**
 - Lista de serviços dinâmica (consulta, vacina, desparasitação, banho, tosquia, análises)
 - Quando concluído, cria PENDENTE para aprovação do gestor e avisa o gestor
 - Cliente recebe confirmação de envio e aguarda OK/NÃO
@@ -31,11 +41,13 @@
 ### Histórico de atendimentos (`src/atendimento/historico.js`, `src/dados/historico.json`)
 - Registo de cada agendamento aprovado (cliente, serviço, animal, espécie, data/hora, estado)
 - `Historico.registar()`, `Historico.listar(cliente)`, `Historico.ultimo(cliente)`, `Historico.todos()`
+- **`Historico.todos()` limpa expirados (TTL 2 anos) antes de devolver**
 - Usado pelo painel web e pelo roteador (após aprovação do gestor)
 
 ### Lista de espera (`src/atendimento/listaEspera.js`, `src/dados/listaEspera.json`)
 - Quando um horário está ocupado (CONFLITO), o cliente é adicionado à lista de espera
 - `ListaEspera.adicionar()`, `ListaEspera.listar()`, `ListaEspera.atender(id)`, `ListaEspera.proximo(servico)`
+- **`ListaEspera.remover(id)` (via `atender`) limpa expirados (TTL 30 dias) antes de remover**
 - Usado pelo roteador em caso de conflito de horário
 
 ### Múltiplos calendários (`src/agenda/google-calendar.js`)
@@ -179,4 +191,4 @@
 | `test/simulador.js` | Simulador de testes |
 | `.env.exemplo` | Variáveis de ambiente (exemplo) |
 
-Última atualização: 16/10/2026
+Última atualização: 15/10/2026
