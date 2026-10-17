@@ -132,6 +132,19 @@
 - Suporte a múltiplos idiomas (PT-PT / EN)
 - Deploy em servidor dedicado (VPS/Raspberry Pi) em vez do PC da clínica
 
+## 🔗 Repositórios WhatsApp úteis (referência — não implementar a menos que seja necessário)
+
+| Repositório | Descrição | Relevância para o pica |
+|---|---|---|
+| [WhiskeySockets/Baileys](https://github.com/whiskeysockets/Baileys) | Biblioteca WhatsApp Web usada pelo projeto | Já integrada em `src/gateway/baileys-gateway.js` |
+| [Baileys Wiki](https://baileys.wiki/) | Documentação oficial da Baileys | Consultar para boas práticas de reconexão e anti-ban |
+| [rizzzky78/wa-chatbot-boilerplate](https://github.com/rizzzky78/wa-chatbot-boilerplate) | Boilerplate chatbot WhatsApp + Baileys | Estrutura de referência para expansão futura |
+| [FX-SIFAT/baileys-wrapper](https://github.com/FX-SIFAT/baileys-wrapper) | Wrapper simplificado da Baileys | Padrões de envio de mensagem e rate limiting |
+| [WhatsApp/WhatsApp-Flows-Tools](https://github.com/WhatsApp/WhatsApp-Flows-Tools/tree/main/examples/endpoint/nodejs/book-appointment) | Exemplo de agendamento (WhatsApp Cloud API) | Padrões de fluxo de agendamento (NÃO usar Cloud API — regra do projeto) |
+| [Hiberius/whatsapp-receptionist](https://github.com/Hiberius/whatsapp-receptionist) | Recepcionista WhatsApp | Ideias para fluxo de atendimento |
+
+⚠️ Regras do projeto: NÃO usar WhatsApp Cloud API paga nem BSP. Apenas Baileys (gratuito, local). Não adicionar novas dependências npm sem justificação.
+
 ## 🚫 Não fazer (regras e limites)
 
 - NÃO usar WhatsApp Cloud API paga nem BSP (Baileys é gratuito e local)
@@ -140,7 +153,6 @@
 - NÃO expor `.env` nem `auth_info/` no git
 - NÃO commitar `credentials.json` nem `token.json` do Google Calendar
 
-## 🔧 Ficheiros-chave da app
 
 | Ficheiro | Responsabilidade |
 |---|---|
