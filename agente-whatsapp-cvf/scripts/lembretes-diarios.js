@@ -1,8 +1,8 @@
 /* Script de lembretes diários (chamar via SO cron, ex: 09:00).
-   Liga o WhatsApp, envia lembretes dos eventos de amanhã e encerra. */
+   Liga o WhatsApp, envia lembretes 24h + follow-ups vencidos, e encerra. */
 require('dotenv').config();
 const { ligarGateway } = require('../src/gateway/baileys-gateway');
-const { enviarLembretesDiarios } = require('../src/agenda/lembretes');
+const { enviarLembretesDiarios, enviarFollowups } = require('../src/agenda/lembretes');
 
 (async () => {
   let sock;
@@ -17,6 +17,8 @@ const { enviarLembretesDiarios } = require('../src/agenda/lembretes');
     };
     const enviados = await enviarLembretesDiarios(enviar);
     console.log('Lembretes enviados:', JSON.stringify(enviados, null, 1));
+    const foll = await enviarFollowups(enviar);
+    console.log('Follow-ups enviados:', JSON.stringify(foll, null, 1));
     process.exit(0);
   } catch (e) {
     console.error('Falha nos lembretes:', e.message);

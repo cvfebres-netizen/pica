@@ -100,22 +100,26 @@ Detalhe completo em `docs/ligacao-passo-a-passo.md`.
 
 ## 5. O que o agente faz (sem rodeios)
 
-- Cumprimenta e pergunta: animal, motivo, dia/hora preferida. Suporte a PT-PT e EN (escreva `/pt` ou `/en`).
+- Primeira mensagem de um número novo → **menu numerado** (1 Marcar, 2 Horário/Morada, 3 Preços/Serviços, 4 Falar com a equipa). Troca de idioma a qualquer altura: `/pt`, `/en`, `/es`, `/fr`.
+- Cumprimenta e pergunta: animal, motivo, dia/hora preferida. Suporte a PT-PT, EN, ES e FR.
 - **Marca/remarca/cancela SEMPRE com OK do gestor, e tudo aparece no Calendar:**
   cliente pede → entra logo como **⏳ PROVISÓRIO** no Google Calendar
   (transparente, mostra-se "livre") + gestor recebe aviso no WhatsApp →
-  gestor responde **OK** (passa a ✅ CONFIRMADO, opaco) ou **NÃO**
+  gestor responde **OK** (passa a ✅ CONFIRMADO, opaco, regista histórico e agenda follow-up de vacina/desparasitação) ou **NÃO**
   (provisório apagado, cliente avisado para escolher outra hora).
+  O gestor também pode aprovar/recusar no **painel web** (executa Calendar + histórico + follow-up).
+- Fora do horário da clínica (`HORARIO_CLINICA`): urgências passam sempre; pedidos de marcar/remarcar/cancelar são **registados como pendentes sem incomodar o gestor** e confirmados de manhã.
 - Se o horário pedir já estiver ocupado, o bot coloca o cliente na **lista de espera** e sugere horários alternativos (±1h, ±2h).
-- O gestor vê a fila com a palavra `pendentes`.
-- **Lembretes automáticos:** 24h antes da consulta e confirmação 2h antes (cron às 09:00 ou via `npm run lembretes`).
+- O gestor vê a fila com a palavra `pendentes`. No painel: dashboard com pendentes (botões OK/NÃO), lista de espera, confirmações de presença, follow-ups, métricas e exportação **CSV**.
+- **Lembretes automáticos:** 24h antes da consulta e confirmação 2h antes (cron às 09:00 via `npm run lembretes`), ambos com pergunta **SIM/NÃO de presença**. Resposta SIM confirma, NÃO regista falta. Follow-ups de reforço de vacina (30 dias) e desparasitação (90 dias) enviados automaticamente.
+- **Catálogo de serviços:** palavra "serviços/tabela/catálogo" devolve preços e durações. **Histórico:** "histórico do Rex" devolve atendimentos desse animal.
 - Dúvidas simples: horário, morada, preço base, o que trazer.
   Sempre com o link de agendamento: `LINK_AGENDAMENTO`.
-- **Urgência** (sangue, não respira, envenenamento, acidente): manda ligar já para a clínica, não agenda nem espera OK.
-- Fora de horário: regista pedido e diz que confirmam de manhã.
-- Tudo em PT-PT, mensagens curtas (≤ 2 SMS), sem rodeios.
-- **Verificação automática:** `node src/config/verificar-respostas.js` (14 cenários de resposta).
+- **Urgência** (sangue, não respira, envenenamento, acidente): manda ligar já para a clínica, não agenda nem espera OK. Sintomas ligeiros: empatia + aviso de que não diagnostica + oferta de agendamento. Pânico/agressividade: transfere para humano.
+- Tudo em PT-PT (ou EN/ES/FR), mensagens curtas (≤ 2 SMS), sem rodeios. Entidade sempre **Centro Veterinário de Febres** — sem nomes pessoais.
+- **Verificação automática:** `node src/config/verificar-respostas.js` (22 cenários de resposta, inclui triagem e menu).
 - **Backup automático:** `node scripts/backup-dados.js` (cópia dos JSON de dados com timestamp).
+- **Rotação de logs:** `node src/monitor/logger.js --limpar` (apaga logs com +30 dias; configurável via `LOG_RETENCAO_DIAS`).
 
 ## 6. Custos reais
 

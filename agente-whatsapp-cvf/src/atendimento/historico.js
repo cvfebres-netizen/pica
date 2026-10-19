@@ -63,7 +63,18 @@ function ultimo(cliente) {
   return lista.length ? lista[lista.length - 1] : null;
 }
 
+/* Devolve os atendimentos de um animal específico (nome aproximado, sem acentos). */
+function norm(s) {
+  return String(s || '').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+}
+function porAnimal(nomeAnimal) {
+  const alvo = norm(nomeAnimal);
+  if (!alvo) return [];
+  return limparExpirados(ler()).filter((e) => norm(e.animal).includes(alvo));
+}
+
 /* Devolve todos os atendimentos (para o painel web). */
 function todos() { return limparExpirados(ler()); }
 
-module.exports = { registar, listar, ultimo, todos };
+module.exports = { registar, listar, ultimo, porAnimal, todos };

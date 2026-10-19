@@ -2,6 +2,7 @@
    1. Cliente pede → PENDENTE + aviso ao gestor
    2. Gestor diz OK → grava (aqui simulado) + confirma ao cliente */
 process.env.NUMERO_GESTOR = '351900000000';
+process.env.HORARIO_VERIFICAR = '0';
 const path = require('path');
 const { encaminhar } = require('../src/atendimento/roteador');
 const pendentes = require('../src/atendimento/pendentes');

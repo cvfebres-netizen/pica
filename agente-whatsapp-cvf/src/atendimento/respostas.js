@@ -1,6 +1,7 @@
 /* Respostas curtas PT-PT (e EN opcional), sem rodeios. Máx. 2 mensagens curtas.
    Agora com suporte a idiomas via src/atendimento/idiomas.js. */
 const Idiomas = require('./idiomas');
+const Servicos = require('./servicos');
 const NOME = () => process.env.NOME_CLINICA || 'a clínica';
 const TEL = () => process.env.TELEFONE_CLINICA || 'a clínica';
 const MORADA = () => process.env.MORADA_CLINICA || 'a morada no perfil';
@@ -17,11 +18,25 @@ function valoresBase() {
   };
 }
 
+function servicosLista() {
+  return Servicos
+    .map((s) => '• ' + s.id + ' — ' + s.preco + ' (' + s.duracaoMin + ' min)')
+    .join('\n');
+}
+
 module.exports = {
   ajuda: (lang) => Idiomas.t(lang, 'ajuda', valoresBase()),
   urgencia: (lang) => Idiomas.t(lang, 'urgencia', valoresBase()),
   sintomasLigeiros: (lang) => Idiomas.t(lang, 'sintomasLigeiros', valoresBase()),
   equipaFala: (lang) => Idiomas.t(lang, 'equipaFala', valoresBase()),
+  menu: (lang) => Idiomas.t(lang, 'menu', valoresBase()),
+  presencaPergunta: (resumo, lang) => Idiomas.t(lang, 'presencaPergunta', Object.assign({}, valoresBase(), { resumo })),
+  presencaOk: (lang) => Idiomas.t(lang, 'presencaOk', valoresBase()),
+  presencaFalta: (lang) => Idiomas.t(lang, 'presencaFalta', valoresBase()),
+  catalogo: (lang) => Idiomas.t(lang, 'catalogoIntro', valoresBase()) + '\n' + servicosLista(),
+  idiomaOk: (lang) => Idiomas.t(lang, 'idiomaOk', valoresBase()),
+  foraHorarioReal: (lang) => Idiomas.t(lang, 'foraHorarioReal', valoresBase()),
+  semHistoricoAnimal: (lang) => Idiomas.t(lang, 'semHistoricoAnimal', valoresBase()),
   horario: (lang) => Idiomas.t(lang, 'horario', valoresBase()),
   morada: (lang) => Idiomas.t(lang, 'morada', valoresBase()),
   precos: (lang) => Idiomas.t(lang, 'precos', valoresBase()),

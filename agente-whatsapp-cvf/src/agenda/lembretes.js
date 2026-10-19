@@ -4,6 +4,8 @@
    Evita duplicar: assinala "Lembrete enviado: YYYY-MM-DD" na descrição.
    Chamar via SO cron (ex: todos os dias às 09:00) ou manualmente. */
 const { calendario, FUSO, CAL_ID } = require('./google-calendar');
+const Conf = (() => { try { return require('../atendimento/confirmacoes'); } catch (e) { return null; } })();
+const R = (() => { try { return require('../atendimento/respostas'); } catch (e) { return null; } })();
 
 const UM_DIA = 24 * 60 * 60 * 1000;
 const DUAS_HORAS = 2 * 60 * 60 * 1000;
@@ -52,7 +54,8 @@ async function marcarLembreteEnviado(eventId, novaDescricao) {
 }
 
 /* Envia lembretes para todos os eventos confirmados de amanhã ainda não avisados.
-   `enviar` recebe (numero, texto) e devolve promise. */
+   `enviar` recebe (numero, texto) e devolve promise.
+   Regista pedido de presença (SIM/NÃO) para a confirmação interativa. */
 async function enviarLembretesDiarios(enviar) {
   const amanha = new Date(Date.now() + UM_DIA);
   const eventos = await buscarEventosConfirmadosDia(amanha);
@@ -66,10 +69,11 @@ async function enviarLembretesDiarios(enviar) {
     const hhmm = inicio.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
     const resumo = ev.summary || 'consulta';
     const texto = 'Olá! Lembrete: amanhã às ' + hhmm + ' tem ' + resumo + ' na ' +
-      (process.env.NOME_CLINICA || 'a clínica') + '. Confirma com OK.';
+      (process.env.NOME_CLINICA || 'a clínica') + '. Vem à consulta? Responda SIM para confirmar ou NÃO se não puder vir.';
     try {
       await enviar(tel, texto);
       await marcarLembreteEnviado(ev.id, descricaoComLembrete(ev, sufixo));
+      if (Conf) { try { Conf.pedirPresenca({ cliente: tel, eventoId: ev.id, resumo: resumo + ' amanhã às ' + hhmm }); } catch (e2) {} }
       enviados.push({ tel, evento: ev.id, tipo: '24h' });
     } catch (e) {
       console.log('Falha lembrete ' + tel + ':', e.message);
@@ -79,7 +83,8 @@ async function enviarLembretesDiarios(enviar) {
 }
 
 /* Envia confirmação 2h antes para eventos confirmados hoje ainda não avisados.
-   Chamar via SO cron (ex: contínuo ou a cada hora) ou manualmente. */
+   Chamar via SO cron (ex: contínuo ou a cada hora) ou manualmente.
+   Também regista pedido de presença (SIM/NÃO). */
 async function enviarConfirmacao2h(enviar) {
   const agora = new Date();
   const doisHorasDepois = new Date(Date.now() + DUAS_HORAS);
@@ -98,10 +103,11 @@ async function enviarConfirmacao2h(enviar) {
     const hhmm = inicio.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
     const resumo = ev.summary || 'consulta';
     const texto = 'Olá! Lembrete: daqui a 2 horas (às ' + hhmm + ') tem ' + resumo + ' na ' +
-      (process.env.NOME_CLINICA || 'a clínica') + '. Confirma com OK.';
+      (process.env.NOME_CLINICA || 'a clínica') + '. Vem à consulta? Responda SIM para confirmar ou NÃO se não puder vir.';
     try {
       await enviar(tel, texto);
       await marcarLembreteEnviado(ev.id, descricaoComLembrete(ev, sufixo));
+      if (Conf) { try { Conf.pedirPresenca({ cliente: tel, eventoId: ev.id, resumo: resumo + ' hoje às ' + hhmm }); } catch (e2) {} }
       enviados.push({ tel, evento: ev.id, tipo: '2h' });
     } catch (e) {
       console.log('Falha confirmação 2h ' + tel + ':', e.message);
@@ -110,4 +116,25 @@ async function enviarConfirmacao2h(enviar) {
   return enviados;
 }
 
-module.exports = { enviarLembretesDiarios, enviarConfirmacao2h, buscarEventosConfirmadosDia, telefoneNaDescricao };
+/* Envia follow-ups vencidos (ex: reforço de vacina) ainda não enviados.
+   `enviar` recebe (numero, texto). Devolve lista de enviados. */
+async function enviarFollowups(enviar) {
+  if (!Conf) return [];
+  const vencidos = Conf.followupsVencidos();
+  const enviados = [];
+  for (const f of vencidos) {
+    const texto = 'Olá! Da ' + (process.env.NOME_CLINICA || 'a clínica')
+      + ': está na altura do ' + (f.mensagem || ('reforço de ' + (f.servico || 'consulta')))
+      + (f.animal ? ' do(a) ' + f.animal : '') + '. Quer marcar? Diga aqui ou responda SIM.';
+    try {
+      await enviar(f.cliente, texto);
+      Conf.marcarFollowupEnviado(f.id);
+      enviados.push({ tel: f.cliente, followup: f.id });
+    } catch (e) {
+      console.log('Falha follow-up ' + f.cliente + ':', e.message);
+    }
+  }
+  return enviados;
+}
+
+module.exports = { enviarLembretesDiarios, enviarConfirmacao2h, enviarFollowups, buscarEventosConfirmadosDia, telefoneNaDescricao };

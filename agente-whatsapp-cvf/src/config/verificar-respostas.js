@@ -17,6 +17,7 @@ const R = require('../atendimento/respostas');
 const GESTOR = '351900000000@s.whatsapp.net';
 const CLIENTE = '351911111111@s.whatsapp.net';
 process.env.NUMERO_GESTOR = '351900000000';
+process.env.HORARIO_VERIFICAR = '0';
 
 let total = 0, falhas = 0;
 const enviados = [];
@@ -26,6 +27,7 @@ function limparEstado() {
   try { require('fs').unlinkSync(path.join(__dirname, '..', 'dados', 'escalation.json')); } catch (e) {}
   try { require('fs').unlinkSync(path.join(__dirname, '..', 'dados', 'pendentes.json')); } catch (e) {}
   try { require('fs').unlinkSync(path.join(__dirname, '..', 'dados', 'formulario-estados.json')); } catch (e) {}
+  try { require('fs').unlinkSync(path.join(__dirname, '..', 'dados', 'primeiro-contacto.json')); } catch (e) {}
 }
 
 function t(nome, cond) {
@@ -79,6 +81,30 @@ async function executar() {
 
   // 8. Link de agendamento presente
   t('link no ajuda', R.ajuda().includes('calendar.app.google'));
+
+  // 9. Sintomas ligeiros (PASSO 2): empatia + não diagnostica + pergunta dias
+  limparEstado();
+  const rSin = await encaminhar({ de: CLIENTE, texto: 'o cão está com vómitos desde ontem' }, enviar);
+  t('sintomas ligeiros devolvem texto', typeof rSin === 'string' && rSin.length > 0);
+  t('sintomas ligeiros não diagnosticam', /não posso diagnosticar/i.test(rSin));
+  t('sintomas ligeiros perguntam dias', /quantos dias/i.test(rSin));
+  t('sintomas ligeiros não geram pendente', pendentes.resumo() === 'Sem pendentes.');
+
+  // 10. Pânico/agressividade: transfere para humano + avisa gestor
+  limparEstado();
+  const rPan = await encaminhar({ de: CLIENTE, texto: 'socorro, ele vai morrer!' }, enviar);
+  t('pânico transfere para equipa', /equipa vai falar/i.test(rPan));
+  t('pânico avisa gestor', enviados.some((e) => /pânico\/agressividade/i.test(e.texto)));
+
+  // 11. Menu de boas-vindas: saudação de número novo mostra opções numeradas
+  limparEstado();
+  try { require('fs').unlinkSync(path.join(__dirname, '..', 'dados', 'primeiro-contacto.json')); } catch (e) {}
+  const rMenu = await encaminhar({ de: CLIENTE, texto: 'olá' }, enviar);
+  t('saudação mostra menu', /marcar consulta/i.test(rMenu) && /horário e morada/i.test(rMenu));
+
+  // 12. Opção 3 do menu devolve catálogo de serviços
+  const rCat = await encaminhar({ de: CLIENTE, texto: '3' }, enviar);
+  t('opção 3 devolve catálogo', /consulta/i.test(rCat) && /min\)/i.test(rCat));
 
   console.log('\nVerificação automática: ' + (total - falhas) + '/' + total + ' OK');
   process.exit(falhas === 0 ? 0 : 1);

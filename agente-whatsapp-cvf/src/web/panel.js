@@ -7,11 +7,13 @@
      POST /pendente/:id/aprovar
      POST /pendente/:id/recusar */
 const express = require('express');
+const fs = require('fs');
 const path = require('path');
 const pendentes = require('../atendimento/pendentes');
 const Historico = require('../atendimento/historico');
 const ListaEspera = require('../atendimento/listaEspera');
 const R = require('../atendimento/respostas');
+const Conf = require('../atendimento/confirmacoes');
 const logger = require('../monitor/logger');
 const metricas = require('../monitor/metricas');
 
@@ -59,26 +61,44 @@ function botaoAcao(id, tipo) {
     + '</form>';
 }
 
-// Dashboard: pendentes + lista de espera
+// Dashboard: pendentes + lista de espera + confirmações + follow-ups
 app.get('/', (req, res) => {
   const lista = pendentes.resumo().split('\n').filter(Boolean);
 
   const espera = ListaEspera.listar();
   let pendentesHtml = '<ul>';
-  const todas = pendentes.ler ? pendentes.ler() : [];
-  // pendentes.js não exporta ler, então usamos o resumo como texto
-  pendentesHtml += '<li>' + lista.join('</li><li>') + '</li>';
+  const todas = pendentes.ler();
+  for (const p of todas.filter((x) => x.estado === 'PENDENTE')) {
+    pendentesHtml += '<li>' + p.id + ' | ' + p.tipo + ' | '
+      + (p.dados ? (p.dados.animal + ' ' + p.dados.dia + ' ' + p.dados.hora) : String(p.texto || '').slice(0, 60))
+      + ' | ' + p.cliente
+      + ' <form method="post" style="display:inline" action="/pendente/' + p.id + '/aprovar"><button>OK</button></form>'
+      + ' <form method="post" style="display:inline" action="/pendente/' + p.id + '/recusar"><button>NÃO</button></form>'
+      + '</li>';
+  }
   pendentesHtml += '</ul>';
   let esperaHtml = '<ul>';
   for (const e of espera) {
     esperaHtml += '<li>' + e.id + ' | ' + e.servico + ' | ' + e.animal + ' | prefere ' + e.dataPreferida + ' ' + e.horaPreferida + '</li>';
   }
   esperaHtml += '</ul>';
+  let confHtml = '<ul>';
+  for (const c of Conf.todasConfirmacoes().slice(-10).reverse()) {
+    confHtml += '<li>' + c.id + ' | ' + c.cliente + ' | ' + (c.resumo || '') + ' | <b>' + c.estado + '</b></li>';
+  }
+  confHtml += '</ul>';
+  let follHtml = '<ul>';
+  for (const fl of Conf.todosFollowups().slice(-10).reverse()) {
+    follHtml += '<li>' + fl.id + ' | ' + fl.cliente + ' | ' + fl.animal + ' | ' + fl.servico + ' | ' + fl.data + ' | <b>' + fl.estado + '</b></li>';
+  }
+  follHtml += '</ul>';
   res.send(htmlCabecalho('Dashboard')
     + '<h1>' + (process.env.NOME_CLINICA || 'CVF') + ' — Gestão de Agendamentos</h1>'
-    + '<nav><a href="/">Dashboard</a> | <a href="/historico">Histórico</a> | <a href="/lista-espera">Lista de Espera</a></nav>'
-    + '<h2>Pendentes de aprovação</h2>' + pendentesHtml
+    + '<nav><a href="/">Dashboard</a> | <a href="/historico">Histórico</a> | <a href="/lista-espera">Lista de Espera</a> | <a href="/metrics">Métricas</a> | <a href="/export/historico.csv">CSV histórico</a> | <a href="/export/pendentes.csv">CSV pendentes</a></nav>'
+    + '<h2>Pendentes de aprovação</h2>' + (todas.some((x) => x.estado === 'PENDENTE') ? pendentesHtml : '<p>Sem pendentes.</p>')
     + '<h2>Lista de Espera</h2>' + (espera.length ? esperaHtml : '<p>' + R.listaEsperaVazia() + '</p>')
+    + '<h2>Confirmações de presença (últimas 10)</h2>' + confHtml
+    + '<h2>Follow-ups (últimos 10)</h2>' + follHtml
     + htmlRodape());
 });
 
@@ -117,27 +137,84 @@ app.post('/lista-espera/atender/:id', (req, res) => {
   res.redirect('/lista-espera');
 });
 
-// Aprovar pendente
-app.post('/pendente/:id/aprovar', (req, res) => {
-  pendentes.aprovar(req.params.id, { resumo: 'Aprovado via painel web' }, 'painel_web');
+// Aprovar pendente (executa no Calendar + regista histórico + agenda follow-up)
+app.post('/pendente/:id/aprovar', async (req, res) => {
+  const lista = pendentes.ler();
+  const p = lista.find((x) => x.id === req.params.id);
+  if (!p) return res.redirect('/');
+  try {
+    const A = require('../agenda/google-calendar');
+    let ev = null;
+    if (p.tipo === 'marcar' && p.eventoId) ev = await A.confirmarEvento(p.eventoId);
+    else if (p.tipo === 'marcar') ev = await A.marcarConsulta({ cliente: p.cliente, ...(p.dados || {}) });
+    else if (p.tipo === 'cancelar') ev = await A.cancelarConsulta({ cliente: p.cliente, texto: p.texto });
+    else if (p.tipo === 'remarcar') ev = await A.remarcarConsulta({ cliente: p.cliente, texto: p.texto });
+    if (ev) {
+      pendentes.aprovar(p.id, ev, 'painel_web');
+      if (p.tipo === 'marcar' && p.dados) {
+        Historico.registar({
+          cliente: p.cliente, tipo: p.tipo,
+          servico: p.dados.servicoId || p.dados.servico || 'consulta',
+          animal: p.dados.animal || '', especie: p.dados.especie || '',
+          dataHora: p.dados.dia || '', eventoId: ev.id || null, estado: 'CONFIRMADO'
+        });
+        const servFol = p.dados.servicoId || p.dados.servico || '';
+        const nDias = Conf.diasFollowupPadrao(servFol);
+        if (nDias > 0) {
+          Conf.agendarFollowup({ cliente: p.cliente, animal: p.dados.animal || '', servico: servFol, dias: nDias, mensagem: 'reforço de ' + servFol });
+        }
+      }
+    } else {
+      pendentes.aprovar(p.id, { resumo: 'Aprovado via painel web (sem Calendar)' }, 'painel_web');
+    }
+  } catch (e) {
+    pendentes.aprovar(req.params.id, { resumo: 'Aprovado via painel web (Calendar indisponível)' }, 'painel_web');
+  }
   res.redirect('/');
 });
 
 // Recusar pendente
-app.post('/pendente/:id/recusar', (req, res) => {
+app.post('/pendente/:id/recusar', async (req, res) => {
+  const lista = pendentes.ler();
+  const p = lista.find((x) => x.id === req.params.id);
+  if (p && p.eventoId) {
+    try {
+      const A = require('../agenda/google-calendar');
+      await A.apagarEvento(p.eventoId);
+    } catch (e) {}
+  }
   pendentes.recusar(req.params.id, 'painel_web');
   res.redirect('/');
 });
 
+// Exportar CSV (item 18): histórico e pendentes
+function csv(linhas) {
+  const esc = (v) => '"' + String(v === null || v === undefined ? '' : v).replace(/"/g, '""') + '"';
+  return linhas.map((l) => l.map(esc).join(';')).join('\n');
+}
+app.get('/export/historico.csv', (req, res) => {
+  const h = Historico.todos();
+  const linhas = [['id', 'cliente', 'tipo', 'servico', 'animal', 'especie', 'dataHora', 'estado', 'criadoEm']];
+  for (const e of h) linhas.push([e.id, e.cliente, e.tipo, e.servico, e.animal, e.especie, e.dataHora, e.estado, e.criadoEm]);
+  res.type('text/csv; charset=utf-8').send('﻿' + csv(linhas));
+});
+app.get('/export/pendentes.csv', (req, res) => {
+  const lista = pendentes.ler();
+  const linhas = [['id', 'tipo', 'cliente', 'texto', 'estado', 'criadoEm']];
+  for (const p of lista) linhas.push([p.id, p.tipo, p.cliente, p.texto, p.estado, p.criadoEm]);
+  res.type('text/csv; charset=utf-8').send('﻿' + csv(linhas));
+});
+
 // Endpoint /health para monitorização (uptime, dados, env)
 const BOOT = Date.now();
+let PORTA_ACTUAL = parseInt(process.env.PORT || '3000', 10);
 app.get('/health', (req, res) => {
   const dadosExist = fs.existsSync(path.join(__dirname, '..', 'dados'));
   const logsExist = fs.existsSync(path.join(__dirname, '..', 'logs'));
   res.type('application/json').send(JSON.stringify({
     status: 'ok',
     uptimeMs: Date.now() - BOOT,
-    porta: p,
+    porta: PORTA_ACTUAL,
     dados: dadosExist ? 'ok' : 'missing',
     logs: logsExist ? 'ok' : 'missing',
     env: {
@@ -166,6 +243,7 @@ app.get('/metrics', (req, res) => {
 
 function iniciar(porta) {
   const p = porta || parseInt(process.env.PORT || '3000', 10);
+  PORTA_ACTUAL = p;
   app.listen(p, () => console.log('Painel web a ouvir em http://localhost:' + p));
   return app;
 }

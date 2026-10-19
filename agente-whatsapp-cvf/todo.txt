@@ -1,6 +1,6 @@
 # Memória — Agente WhatsApp Cvfebres Centro Veterinário de Febres
 
-## Estado geral: FUNCIONAL (testes simulados 11/11 OK, verificação automática 14/14 OK), a aguardar ligação real ao Google Calendar e ao WhatsApp
+## Estado geral: FUNCIONAL (testes simulados 11/11 OK, verificação automática 22/22 OK), a aguardar ligação real ao Google Calendar e ao WhatsApp
 
 ---
 
@@ -45,13 +45,13 @@
 - Após N mensagens não percebidas, avisa gestor, TTL 24h
 
 ### Roteador (src/atendimento/roteador.js)
-- Deteta idioma (PT-PT/EN), reagendamento sugestivo, try/catch no Calendar
+- Deteta idioma (PT-PT/EN/ES/FR), menu de boas-vindas (saudação + opções 1-4), confirmação de presença SIM/NÃO, catálogo, histórico por animal, fora de horário real, reagendamento sugestivo, try/catch no Calendar
 
 ### Respostas (src/atendimento/respostas.js)
-- Textos PT-PT/EN com placeholders
+- Textos PT-PT/EN/ES/FR com placeholders + menu, catálogo, presença, fora de horário
 
-### Idiomas (src/atendimento/idiomas.js)
-- Dicionário PT-PT/EN, deteta por prefixo /pt ou /en
+### Idiomas (src/atendimento/idiomas.js + idiomas-es.js + idiomas-fr.js)
+- Dicionário PT-PT/EN/ES/FR, deteta por prefixo /pt /en /es /fr
 
 ### Prompts (src/prompts/)
 - `src/prompts/centro-veterinario-de-febres.md` — persona e regras de triagem (3 passos) da entidade; sem nomes pessoais, sempre Centro Veterinário de Febres
@@ -70,9 +70,32 @@
 - scripts/lembretes-diarios.js — lembretes via WhatsApp
 - scripts/instalar.bat — instalação standalone Windows
 
+### Histório / presenças / follow-ups
+- `src/atendimento/historico.js` — `porAnimal(nome)` (match sem acentos)
+- `src/atendimento/boasvindas.js` — primeiro contacto + deteção de saudação
+- `src/atendimento/confirmacoes.js` — presença SIM/NÃO + follow-ups (30/90 dias)
+
+### Horário real (src/config/horario.js)
+- `abertoAgora()` com fail-open; `HORARIO_VERIFICAR=0` nos testes
+
+### Rate-limit persistente (src/gateway/baileys-gateway.js)
+- `src/dados/rate-limit.json` com throttle de escrita
+
+### Logs (src/monitor/logger.js)
+- `limparAntigos()` + `node src/monitor/logger.js --limpar` (retenção 30 dias)
+
+### Painel (src/web/panel.js)
+- Aprovar executa Calendar + histórico + follow-up; recusar apaga provisório; CSV histórico/pendentes; fix /health (fs + porta)
+
+### Deploy (ecosystem.config.js + scripts/painel-run.js)
+- PM2: cvf-whatsapp + cvf-painel com reinício automático
+
+### Env (.env.exemplo)
+- FOLLOWUP_VACINA_DIAS, FOLLOWUP_DESPARASITACAO_DIAS, LOG_RETENCAO_DIAS, HORARIO_VERIFICAR
+
 ### Testes
 - test/simulador.js — 11/11 OK
-- src/config/verificar-respostas.js — 14/14 OK
+- src/config/verificar-respostas.js — 22/22 OK (inclui triagem, menu, catálogo)
 
 ---
 
@@ -112,14 +135,17 @@
 | src/atendimento/idiomas.js | Suporte a múltiplos idiomas |
 | src/atendimento/servicos.js | Tabela de serviços e regras de negócio |
 | src/atendimento/formulario.js | FSM passo a passo de agendamento |
-| src/atendimento/historico.js | Histórico de atendimentos por cliente |
+| src/atendimento/historico.js | Histórico de atendimentos por cliente + porAnimal(nome) |
+| src/atendimento/boasvindas.js | Menu de boas-vindas (primeiro contacto, saudação → opções 1-4) |
+| src/atendimento/confirmacoes.js | Confirmações de presença SIM/NÃO + follow-ups vacina/desparasitação |
 | src/atendimento/listaEspera.js | Lista de espera quando horário está ocupado |
 | src/atendimento/pendentes.js | Gestão de agendamentos provisórios |
 | src/atendimento/escalation.js | Escalation após falhas |
 | src/atendimento/transcricao.js | Transcrição de áudio (stub) |
 | src/agenda/google-calendar.js | Integração Google Calendar |
-| src/agenda/lembretes.js | Lembretes 24h + confirmação 2h |
-| src/web/panel.js | Painel web Express + /health + /metrics |
+| src/agenda/lembretes.js | Lembretes 24h + confirmação 2h (SIM/NÃO) + follow-ups |
+| src/config/horario.js | Horário de funcionamento real (abertoAgora, fail-open) |
+| src/web/panel.js | Painel web Express + /health + /metrics + aprovar/recusar + CSV |
 | src/monitor/logger.js | Logger diário rotativo |
 | src/monitor/metricas.js | Contadores JSON por dia |
 | src/dados/ | JSON locais |

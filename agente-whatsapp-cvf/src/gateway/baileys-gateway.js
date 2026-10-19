@@ -21,16 +21,24 @@ const mensagensProcessadas = new Map(); // messageId -> timestamp
 
 function podeEnviar(numero) {
   const agora = Date.now();
-  const entrada = rateMap.get(numero) || { timestamps: [], blockedUntil: 0 };
+  let entrada = rateMap.get(numero);
+  if (!entrada) {
+    const disco = lerRateLimit()[numero];
+    entrada = disco || { timestamps: [], blockedUntil: 0 };
+    rateMap.set(numero, entrada);
+  }
   if (agora < entrada.blockedUntil) return false;
   entrada.timestamps = entrada.timestamps.filter((ts) => agora - ts < RATE_LIMIT_WINDOW);
   if (entrada.timestamps.length >= RATE_LIMIT_MAX) {
     entrada.blockedUntil = agora + RATE_LIMIT_WINDOW;
     rateMap.set(numero, entrada);
+    guardarRateLimit(Object.fromEntries(rateMap));
     return false;
   }
   entrada.timestamps.push(agora);
   rateMap.set(numero, entrada);
+  // guardarRateLimit throttled: so a cada 5 registos para nao gastar disco
+  if (entrada.timestamps.length % 5 === 0) guardarRateLimit(Object.fromEntries(rateMap));
   return true;
 }
 

@@ -9,6 +9,9 @@ const Form = require('./formulario');
 const Historico = require('./historico');
 const ListaEspera = require('./listaEspera');
 const Idiomas = require('./idiomas');
+const BV = require('./boasvindas');
+const Conf = require('./confirmacoes');
+const Horario = require('../config/horario');
 
 function agenda() { return require('../agenda/google-calendar'); }
 function gestorNumero() { return (process.env.NUMERO_GESTOR || '').replace(/\D/g, ''); }
@@ -28,7 +31,7 @@ function souGestor(de) {
 
 const RE = {
   urgencia: /(sangue|hemorragia|nao respira|n[ãa]o respira|envenen|atropel|acidente|convuls|desmai|moribund|urgente|emergencia)/i,
-  sintomasLigeiros: /(v[oô]mito|diarreia|coceira|falta.*apetite|espirr|tosse|fraqueza|apatia|letargia)/i,
+  sintomasLigeiros: /(vomito|vomitos|diarreia|coceira|comichao|falta.*apetite|espirr|tosse|fraqueza|apatia|letargia|olho|remel|lagrim|ferida|manca|pata|pelo|otite|ouvido)/i,
   panico: /(deses|p[êe]nico|ang[úu]stia|socorro|estou a perder|morrer|vai morrer)/i,
   agressivo: /(est[ou]pid|idiota|in[úu]til|lixo|pior|odiar|odeio|imbecil|merda|caralho|puta|foda)/i,
   ok: /^(ok|sim|confirmo|confirma|aprov|pode|segue|força|forca)\b/i,
@@ -39,11 +42,19 @@ const RE = {
   horario: /(horario|hor[áa]rio|aberto|fecha|quando.*abrem)/i,
   morada: /(morada|onde|localiza|endere[cç]o|como chego)/i,
   preco: /(pre[cç]o|quanto custa|tabela|valor)/i,
-  pendentes: /(pendentes|fila|espera|por aprovar)/i
+  pendentes: /(pendentes|fila|espera|por aprovar)/i,
+  menu: /^[1-4]$/,
+  confirmacao: /^(sim.*(venho|vou|confirmo)|vou.*(sim|ir)|confirmo.*presen|estou.*(a caminho|a ir))$/i,
+  falta: /^(n[aã]o.*(venho|vou|posso|consigo)|n[aã]o.*(ir|estar)|falto|desisto|nao.*(da|consigo))$/i,
+  catalogo: /(servi[cç]os|tabela|cat[aá]logo|lista.*(pre[cç]os|servi[cç]os)|o que fazem)/i,
+  historicoAnimal: /(historico|histórico|passado|anteriores).*(do|da|de)\s+([A-Za-zÀ-ÿ]{2,20})/i,
+  historico: /(historico|histórico|meus.*atendimentos|minhas.*consultas|ja.*(vim|fui|estive)|ultima.*consulta)/i,
+  idioma: /^\/(pt|en|es|fr)$/i
 };
 
 async function encaminhar({ de, texto }, enviar) {
   const lang = Idiomas.detectar(texto, de);
+  const textoNorm = normou(texto);
   Idiomas.guardarIdioma(de, lang);
   if (Form.temFormularioAberto(de)) {
     const r = Form.processar({ de, texto });
@@ -51,6 +62,40 @@ async function encaminhar({ de, texto }, enviar) {
       await enviar(r.pendente.gestorJid, R.avisoGestor(r.pendente));
     }
     return r ? r.resposta : null;
+  }
+  // Comando explícito de idioma: /pt /en /es /fr
+  if (RE.idioma.test(texto.trim())) {
+    BV.marcarVisto(de);
+    return R.idiomaOk(lang);
+  }
+  // Menu de boas-vindas: saudação/menu de quem ainda não viu, ou "menu"
+  if ((BV.ehSaudacao(texto) && !BV.jaViu(de)) || /^menu$/i.test(texto.trim())) {
+    BV.marcarVisto(de);
+    Esc.resetar(de);
+    return R.menu(lang);
+  }
+  BV.marcarVisto(de);
+  // Resposta numérica ao menu
+  if (RE.menu.test(texto.trim())) {
+    Esc.resetar(de);
+    const op = texto.trim();
+    if (op === '1') return R.pedirDadosMarcar(lang);
+    if (op === '2') return R.horario(lang) + ' | ' + R.morada(lang);
+    if (op === '3') return R.catalogo(lang);
+    return R.equipaFala(lang);
+  }
+  // Confirmação de presença SIM/NÃO (só conta se houver pedido pendente)
+  if (Conf.pedidoPendente(de)) {
+    if (/^(sim|s|yes|si|oui|ok|confirmo|confirmado)$/i.test(texto.trim())) {
+      Conf.confirmarPresenca(de);
+      Esc.resetar(de);
+      return R.presencaOk(lang);
+    }
+    if (/^(n[aã]o|nao|n|no|non|not)$/i.test(texto.trim())) {
+      Conf.marcarFalta(de, texto);
+      Esc.resetar(de);
+      return R.presencaFalta(lang);
+    }
   }
   if (souGestor(de)) {
     const p = pendentes.ultimoPendente();
@@ -66,7 +111,31 @@ async function encaminhar({ de, texto }, enviar) {
     if (gJid && enviar) await enviar(gJid, '⚠️ Escalation (pânico/agressividade): ' + de + ' precisa de atendimento humano imediato.');
     return R.equipaFala(lang);
   }
-  if (RE.sintomasLigeiros.test(texto)) return R.sintomasLigeiros(lang);
+  if (RE.sintomasLigeiros.test(textoNorm)) return R.sintomasLigeiros(lang);
+  if (RE.catalogo.test(texto)) { Esc.resetar(de); return R.catalogo(lang); }
+  const mHistAnimal = texto.match(RE.historicoAnimal);
+  if (mHistAnimal) {
+    Esc.resetar(de);
+    const entradas = Historico.porAnimal(mHistAnimal[3]);
+    if (!entradas.length) return R.semHistoricoAnimal(lang);
+    return R.historicoLista(entradas.slice(-5), lang);
+  }
+  if (RE.historico.test(texto)) {
+    Esc.resetar(de);
+    const entradas = Historico.listar(de);
+    if (!entradas.length) return R.historicoVazio(lang);
+    return R.historicoLista(entradas.slice(-5), lang);
+  }
+  // Fora de horário: urgência/pânico passam; o resto regista pedido sem incomodar o gestor fora de horas
+  if (!Horario.abertoAgora()) {
+    if (RE.cancelar.test(texto) || RE.remarcar.test(texto) || RE.marcar.test(texto)) {
+      const tipoFH = RE.cancelar.test(texto) ? 'cancelar' : (RE.remarcar.test(texto) ? 'remarcar' : 'marcar');
+      const dadosFH = tipoFH === 'marcar' ? extrairPedido(texto) : undefined;
+      pendentes.criar({ tipo: tipoFH, cliente: de, texto, dados: dadosFH });
+      Esc.resetar(de);
+      return R.foraHorarioReal(lang);
+    }
+  }
   if (RE.cancelar.test(texto)) {
     const p = pendentes.criar({ tipo: 'cancelar', cliente: de, texto });
     Esc.resetar(de);
@@ -170,6 +239,19 @@ async function executarAprovado(p, enviar) {
     return 'Falhou na agenda. Avisei o cliente para ligar.';
   }
   pendentes.aprovar(p.id, ev);
+  try {
+    const servFol = (p.dados && (p.dados.servicoId || p.dados.servico)) || '';
+    const nDias = Conf.diasFollowupPadrao(servFol);
+    if (nDias > 0 && p.cliente) {
+      Conf.agendarFollowup({
+        cliente: p.cliente,
+        animal: (p.dados && (p.dados.animal || '')) || '',
+        servico: servFol,
+        dias: nDias,
+        mensagem: 'reforço de ' + servFol
+      });
+    }
+  } catch (e) {}
   if (p.tipo === 'marcar' && p.dados) {
     Historico.registar({
       cliente: p.cliente,
@@ -212,6 +294,10 @@ function normalizarHora(hora) {
   const hh = String(Number(m[1])).padStart(2, '0');
   const mm = String(Number(m[2] || 0)).padStart(2, '0');
   return hh + ':' + mm;
+}
+
+function normou(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
 module.exports = { encaminhar, extrairPedido, normalizarHora };

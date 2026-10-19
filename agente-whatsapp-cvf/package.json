@@ -11,7 +11,7 @@
     "teste": "node test/simulador.js"
   },
   "dependencies": {
-    "@whiskeysockets/baileys": "^7.0.0",
+    "@whiskeysockets/baileys": "^7.0.0-rc14",
     "googleapis": "^140.0.0",
     "dotenv": "^16.4.5",
     "express": "^4.19.2"

@@ -1,8 +1,11 @@
-/* Suporte a múltiplos idiomas (PT-PT por defeito, EN opcional).
+/* Suporte a múltiplos idiomas (PT-PT por defeito; EN/ES/FR opcionais).
    Deteta idioma pelo prefixo da mensagem (/pt, /en) ou pelo locale do cliente.
    Guardado em src/dados/idiomas-clientes.json para persistir escolha. */
 const fs = require('fs');
 const path = require('path');
+
+const EXTRA_ES = require('./idiomas-es');
+const EXTRA_FR = require('./idiomas-fr');
 
 const FICHA = path.join(__dirname, '..', 'dados', 'idiomas-clientes.json');
 
@@ -26,6 +29,14 @@ const TEXTOS = {
     listaEsperaVazia: 'Lista de espera vazia.',
     historicoVazio: 'Sem histórico de atendimentos ainda.',
     naoPercebi: 'Não percebi bem. Pode repetir com outras palavras?',
+    menu: 'Olá, {nome} 👋 Sou o assistente do {nome}. Escolha uma opção: 1 - Marcar consulta | 2 - Horário e morada | 3 - Preços e serviços | 4 - Falar com a equipa. Responda com o número ou escreva o que precisa.',
+    presencaPergunta: 'Olá! Lembrete: tem {resumo} na {nome}. Vem à consulta? Responda SIM para confirmar ou NÃO se não puder vir.',
+    presencaOk: 'Presença confirmada. Até já! Traga o boletim do animal.',
+    presencaFalta: 'Obrigado por avisar. Ficou registado que não vem. Para remarcar, diga aqui.',
+    catalogoIntro: 'Serviços do {nome}:',
+    semHistoricoAnimal: 'Não encontrei atendimentos para esse animal.',
+    idiomaOk: 'Idioma alterado.',
+    foraHorarioReal: 'Estamos fechados agora ({horario}). Registei o seu pedido e confirmamos de manhã. Urgência: ligue {tel}.',
     equipaFala: 'A nossa equipa vai falar consigo diretamente por aqui. Obrigado.'
   },
   'en': {
@@ -47,9 +58,19 @@ const TEXTOS = {
     listaEsperaVazia: 'Waiting list empty.',
     historicoVazio: 'No attendance history yet.',
     naoPercebi: 'I did not understand well. Can you repeat with other words?',
+    menu: 'Hello, {nome} - I am the {nome} assistant. Choose an option: 1 - Book an appointment | 2 - Hours and address | 3 - Prices and services | 4 - Talk to the team. Reply with the number or write what you need.',
+    presencaPergunta: 'Hello! Reminder: you have {resumo} at {nome}. Are you coming? Reply YES to confirm or NO if you cannot come.',
+    presencaOk: 'Attendance confirmed. See you soon! Bring the animal health record.',
+    presencaFalta: 'Thank you for letting us know. Recorded that you are not coming. To rebook, say it here.',
+    catalogoIntro: '{nome} services:',
+    semHistoricoAnimal: 'I found no appointments for that animal.',
+    idiomaOk: 'Language changed.',
+    foraHorarioReal: 'We are closed now ({horario}). I registered your request and we confirm in the morning. Emergency: call {tel}.',
     equipaFala: 'Our team will talk to you directly here. Thank you.'
   }
 };
+
+Object.assign(TEXTOS, EXTRA_ES, EXTRA_FR);
 
 const POR_DEFEITO = 'pt-PT';
 
@@ -66,6 +87,8 @@ function detectar(texto, jid) {
   const t = (texto || '').trim();
   if (/^\/en/i.test(t)) return 'en';
   if (/^\/pt/i.test(t)) return 'pt-PT';
+  if (/^\/es/i.test(t)) return 'es';
+  if (/^\/fr/i.test(t)) return 'fr';
   const idiomas = lerIdiomas();
   return idiomas[chaveCliente(jid)] || POR_DEFEITO;
 }
@@ -85,4 +108,5 @@ function t(lang, chave, valores = {}) {
   return frase;
 }
 
-module.exports = { detectar, guardarIdioma, t, TEXTOS, POR_DEFEITO };
+const SUPORTADOS = Object.keys(TEXTOS);
+module.exports = { detectar, guardarIdioma, t, TEXTOS, POR_DEFEITO, SUPORTADOS };
