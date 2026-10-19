@@ -8,6 +8,7 @@ const servicos = require('./servicos');
 const Form = require('./formulario');
 const Historico = require('./historico');
 const ListaEspera = require('./listaEspera');
+const Idiomas = require('./idiomas');
 
 function agenda() { return require('../agenda/google-calendar'); }
 function gestorNumero() { return (process.env.NUMERO_GESTOR || '').replace(/\D/g, ''); }
@@ -21,7 +22,7 @@ const MESMO_NUMERO = ehMesmoNumero(gestorNumero(), numeroClinica());
 function souGestor(de) {
   const g = gestorNumero();
   const d = String(de).replace(/\D/g, '');
-  if (!g) return true; // sem número de gestor definido → modo mononúmero: qualquer um gere pendentes
+  if (!g) return true;
   return d.includes(g) || g.includes(d);
 }
 
@@ -39,7 +40,8 @@ const RE = {
 };
 
 async function encaminhar({ de, texto }, enviar) {
-  // 0. Cliente a preencher formulário passo a passo — tem prioridade
+  const lang = Idiomas.detectar(texto, de);
+  Idiomas.guardarIdioma(de, lang);
   if (Form.temFormularioAberto(de)) {
     const r = Form.processar({ de, texto });
     if (r && r.concluiu && r.pendente && enviar && !MESMO_NUMERO) {
@@ -47,56 +49,71 @@ async function encaminhar({ de, texto }, enviar) {
     }
     return r ? r.resposta : null;
   }
-
-  // 1. Gestor a aprovar/recusar um pedido pendente
   if (souGestor(de)) {
     const p = pendentes.ultimoPendente();
     if (RE.ok.test(texto) && p) return await executarAprovado(p, enviar);
     if (RE.nao.test(texto) && p) return await executarRecusado(p, enviar);
     if (RE.pendentes.test(texto)) return pendentes.resumo();
   }
-
-  // 2. Urgência passa à frente de tudo
-  if (RE.urgencia.test(texto)) return R.urgencia();
-
-  // 3. Cliente pede MARCAR -> entra logo PROVISORIO + avisa gestor
-  // NOTA: cancelar/remarcar vêm ANTES porque "cancelar a consulta"
-  // contém a palavra "consulta" e cairia no ramo marcar.
+  if (RE.urgencia.test(texto)) return R.urgencia(lang);
   if (RE.cancelar.test(texto)) {
     const p = pendentes.criar({ tipo: 'cancelar', cliente: de, texto });
     Esc.resetar(de);
     if (enviar && !MESMO_NUMERO) await enviar(p.gestorJid, R.avisoGestor(p));
-    return R.pedidoRegistado('cancelamento');
+    return R.pedidoRegistado('cancelamento', lang);
   }
   if (RE.remarcar.test(texto)) {
     const p = pendentes.criar({ tipo: 'remarcar', cliente: de, texto });
     Esc.resetar(de);
     if (enviar && !MESMO_NUMERO) await enviar(p.gestorJid, R.avisoGestor(p));
-    return R.pedidoRegistado('remarcação');
+    return R.pedidoRegistado('remarcação', lang);
   }
+  const dados = extrairPedido(texto);
   if (RE.marcar.test(texto)) {
-    const dados = extrairPedido(texto);
-    if (!dados.dia || !dados.hora || !dados.animal) {
-      // Inicia formulário passo a passo
-      const r = Form.processar({ de, texto });
-      if (r) return r.resposta;
-      return R.pedirDadosMarcar();
-    }
+    const horaNorm = normalizarHora(dados.hora);
+    let sugestao = '';
+    try {
+      const A = agenda();
+      if (dados.dia && horaNorm) {
+        const inicio = A.paraData(dados.dia, horaNorm);
+        const fim = new Date(inicio.getTime() + 30 * 60000);
+        const ocupado = await A.horarioLivre(inicio, fim, 'consulta');
+        if (ocupado) {
+          ListaEspera.adicionar({
+            cliente: de, servico: 'consulta', animal: dados.animal, especie: '',
+            dataPreferida: dados.dia, horaPreferida: horaNorm, contacto: de
+          });
+          const alternativas = [
+            new Date(inicio.getTime() - 60 * 60000),
+            new Date(inicio.getTime() + 60 * 60000),
+            new Date(inicio.getTime() + 2 * 60 * 60000)
+          ];
+          sugestao = '\nEsse horário está ocupado. Ficou na lista de espera. Sugestões: '
+            + alternativas.map((a) => a.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })).join(' / ')
+            + '\nDiga outro dia/hora se preferir.';
+        }
+      }
+    } catch (e) {}
+    const p = pendentes.criar({ tipo: 'marcar', cliente: de, texto, dados });
+    Esc.resetar(de);
+    if (enviar && !MESMO_NUMERO) await enviar(p.gestorJid, R.avisoGestor(p));
+    return R.pedidoRegistado('marcação', lang) + sugestao;
+  }
+  if (!dados.dia || !dados.hora || !dados.animal) {
+    const r = Form.processar({ de, texto });
+    if (r) return r.resposta;
+    // não inicia formulário → cai abaixo para registar falha/escalation
+  } else {
     Esc.resetar(de);
     const servico = servicos.detetarServico(texto);
     dados.servico = servico.id;
-
-    // Serviços que requerem contacto direto (cirurgia) — não cria pendente nem evento
-    if (servico.contactoDireto) return R.contactoDireto(servico.id);
-
-    // Horários preferenciais para tosquia e banho (início manhã ou início tarde)
+    if (servico.contactoDireto) return R.contactoDireto(servico.id, lang);
     if (servico.horarioPreferencial) {
       const hhmm = normalizarHora(dados.hora);
       if (hhmm && !servico.horarioPreferencial.includes(hhmm)) {
-        return R.horarioPreferencial(servico.id);
+        return R.horarioPreferencial(servico.id, lang);
       }
     }
-
     let ev = null;
     let ocupado = false;
     let conflitoEvento = '';
@@ -113,11 +130,9 @@ async function encaminhar({ de, texto }, enviar) {
     const p = pendentes.criar({ tipo: 'marcar', cliente: de, texto, dados, eventoId: ev ? ev.id : null });
     if (enviar && !MESMO_NUMERO) await enviar(p.gestorJid, R.avisoGestor(p));
     if (ocupado) return 'Esse horário já está ocupado (' + conflitoEvento + '). Ficou na lista de espera para ' + servico.id + '. Avisamos quando houver vaga.';
-    return ev ? R.pedidoProvisorio(ev) : R.pedidoRegistado('marcação');
+    return ev ? R.pedidoProvisorio(ev) : R.pedidoRegistado('marcação', lang);
   }
-  if (RE.horario.test(texto)) { Esc.resetar(de); return R.horario(); }
-  if (RE.morada.test(texto)) { Esc.resetar(de); return R.morada(); }
-  if (RE.preco.test(texto)) { Esc.resetar(de); return R.precos(); }
+
   // não percebeu a intenção → conta falha; ao atingir o limite, escalation para o gestor
   const falhas = Esc.registarFalha(de);
   if (falhas >= Esc.LIMITE && enviar) {
@@ -126,7 +141,7 @@ async function encaminhar({ de, texto }, enviar) {
     if (gJid) await enviar(gJid, '⚠️ Escalation: ' + de + ' não percebido após ' + falhas + ' tentativas. Pegue na conversa.');
     return 'A nossa equipa vai falar consigo diretamente por aqui. Obrigado.';
   }
-  return R.ajuda();
+  return R.ajuda(lang);
 }
 
 async function executarAprovado(p, enviar) {
@@ -144,7 +159,6 @@ async function executarAprovado(p, enviar) {
     return 'Falhou na agenda. Avisei o cliente para ligar.';
   }
   pendentes.aprovar(p.id, ev);
-  // Regista no histórico quando é uma marcação aprovada
   if (p.tipo === 'marcar' && p.dados) {
     Historico.registar({
       cliente: p.cliente,
@@ -166,15 +180,12 @@ async function executarAprovado(p, enviar) {
 }
 
 async function executarRecusado(p, enviar) {
-  // NAO apaga o provisorio do Calendar: remove para o gestor nao ver lixo
   try { if (p.eventoId) await agenda().apagarEvento(p.eventoId); } catch (e) {}
   pendentes.recusar(p.id);
   if (enviar) await enviar(p.cliente, R.recusada());
   return 'Recusado e provisorio removido. Avisei o cliente.';
 }
 
-/* Extração simples: animal após "cão/gato/nome", dia e hora em texto livre.
-   Mantido simples de propósito; a IA local refina se instalada. */
 function extrairPedido(texto) {
   const animal = (texto.match(/(c[ãa]o|gato|cadela|gata)\s+([A-Za-zÀ-ÿ]+)/i) || [])[0]
     || (texto.match(/(o|a)\s+([A-Za-zÀ-ÿ]{2,15})\s+(precisa|está|esta|tem)/i) || [])[0] || '';
@@ -184,7 +195,6 @@ function extrairPedido(texto) {
   return { animal: animal.trim(), dia: dia.trim(), hora: hora.trim(), motivo };
 }
 
-/* Converte "10:30", "10h30", "10 h 30" ou "10" em "HH:mm" */
 function normalizarHora(hora) {
   const m = String(hora || '').match(/(\d{1,2})[:h\s]*(\d{2})?/);
   if (!m) return '';

@@ -129,7 +129,26 @@ app.post('/pendente/:id/recusar', (req, res) => {
   res.redirect('/');
 });
 
-// Métricas (para monitorização simples)
+// Endpoint /health para monitorização (uptime, dados, env)
+const BOOT = Date.now();
+app.get('/health', (req, res) => {
+  const dadosExist = fs.existsSync(path.join(__dirname, '..', 'dados'));
+  const logsExist = fs.existsSync(path.join(__dirname, '..', 'logs'));
+  res.type('application/json').send(JSON.stringify({
+    status: 'ok',
+    uptimeMs: Date.now() - BOOT,
+    porta: p,
+    dados: dadosExist ? 'ok' : 'missing',
+    logs: logsExist ? 'ok' : 'missing',
+    env: {
+      NOME_CLINICA: !!process.env.NOME_CLINICA,
+      TELEFONE_CLINICA: !!process.env.TELEFONE_CLINICA,
+      NUMERO_GESTOR: !!process.env.NUMERO_GESTOR,
+      PAINEL_USER: !!process.env.PAINEL_USER,
+      GOOGLE_CALENDAR_ID: !!process.env.GOOGLE_CALENDAR_ID
+    }
+  }, null, 1));
+});
 app.get('/metrics', (req, res) => {
   const m = metricas.resumo();
   let linhas = '<table><tr><th>Dia</th><th>Métrica</th><th>Valor</th></tr>';

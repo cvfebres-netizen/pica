@@ -44,23 +44,39 @@ agente-whatsapp-cvf/
 ├── todo.txt                ← estado do projeto
 ├── package.json            ← dependências (baileys + googleapis)
 ├── .env.exemplo            ← configurar sem expor segredos
-├── prompts/
-│   └── agente-atendimento.md   ← prompt do agente (colar na IA)
+├── scripts/
+│   ├── instalar.bat        ← instalação standalone (1 clique, Windows)
+│   ├── backup-dados.js     ← backup automático dos JSON de dados
+│   └── lembretes-diarios.js← envia lembretes e encerra (cron)
 ├── src/
-│   ├── index.js            ← arranque: gateway + atendimento + agenda
+│   ├── index.js            ← arranque: valida env + gateway + atendimento
+│   ├── config/
+│   │   ├── env.js          ← valida variáveis obrigatórias na inicialização
+│   │   └── verificar-respostas.js ← testes automáticos de respostas (14 cenários)
 │   ├── gateway/
 │   │   └── baileys-gateway.js  ← liga ao WhatsApp via QR, recebe/envia
+│   ├── monitor/
+│   │   ├── logger.js       ← logger diário rotativo (ficheiro + consola)
+│   │   └── metricas.js     ← contadores JSON por dia
 │   ├── atendimento/
-│   │   ├── roteador.js     ← entende a intenção (marcar/remarcar/cancelar/urgência)
-│   │   └── respostas.js    ← textos curtos em PT-PT
+│   │   ├── roteador.js     ← intenções + reagendamento sugestivo + idiomas
+│   │   ├── respostas.js    ← textos curtos PT-PT / EN
+│   │   ├── idiomas.js      ← suporte a múltiplos idiomas (PT-PT / EN)
+│   │   ├── formulario.js   ← FSM passo a passo (nome→telefone→animal→...)
+│   │   ├── pendentes.js    ← fila de aprovação do gestor
+│   │   ├── historico.js    ← histórico de atendimentos
+│   │   ├── listaEspera.js  ← lista de espera com sugestões de horário
+│   │   ├── escalation.js   ← avisa gestor após N mensagens não percebidas
+│   │   └── transcricao.js  ← transcrição de áudio (stub whisper/OpenAI)
 │   ├── agenda/
-│   │   └── google-calendar.js  ← cria/move/apaga consultas
+│   │   ├── google-calendar.js  ← cria/move/apaga consultas (múltiplos calendários)
+│   │   └── lembretes.js    ← lembrete 24h + confirmação 2h antes
+│   ├── web/
+│   │   └── panel.js        ← painel web: /, /historico, /lista-espera, /metrics, /health
 │   └── dados/
 │       └── memoria.json    ← conversas em curso (nada de base paga)
 ├── test/
-│   └── simulador.js        ← testa sem WhatsApp nem Google
-├── scripts/
-│   └── instalar.bat        ← instala tudo no PC com 1 clique
+│   └── simulador.js        ← testa sem WhatsApp nem Google (11/11 OK)
 └── docs/
     └── ligacao-passo-a-passo.md ← ligar Business + Calendar
 ```
@@ -68,28 +84,36 @@ agente-whatsapp-cvf/
 ## 4. Instalação (PC da clínica, 1 vez)
 
 1. Instalar Node.js LTS (nodejs.org).
-2. Abrir terminal nesta pasta: `npm install`.
+2. Abrir terminal nesta pasta: `npm install` (ou duplo-clique em `scripts/instalar.bat`).
+   O instalador valida a sintaxe de todos os ficheiros JS e cria o `.env`.
 3. Copiar `.env.exemplo` para `.env` e preencher (ver docs).
+   Obrigatório: `NOME_CLINICA`, `TELEFONE_CLINICA`, `NUMERO_GESTOR`, `GOOGLE_CALENDAR_ID`.
+   Opcional mas recomendado: `PAINEL_USER`, `PAINEL_PASS` (painel web protegido).
 4. Ligar Google Calendar (1 vez, grátis): `npm run ligar-google` → abre browser → login → aceita → guarda token.
 5. Arrancar: `npm start` → aparece **QR no terminal** → no telemóvel Business: **Definições → Aparelhos ligados → Ligar aparelho** → lê o QR.
-6. Pronto. O PC fica ligado no horário da clínica com o terminal aberto.
+6. Opcional: iniciar painel web `npm run painel` e testar `http://localhost:3000/health`.
+7. Pronto. O PC fica ligado no horário da clínica com o terminal aberto.
 
 Detalhe completo em `docs/ligacao-passo-a-passo.md`.
 
 ## 5. O que o agente faz (sem rodeios)
 
-- Cumprimenta e pergunta: animal, motivo, dia/hora preferida.
+- Cumprimenta e pergunta: animal, motivo, dia/hora preferida. Suporte a PT-PT e EN (escreva `/pt` ou `/en`).
 - **Marca/remarca/cancela SEMPRE com OK do gestor, e tudo aparece no Calendar:**
   cliente pede → entra logo como **⏳ PROVISÓRIO** no Google Calendar
   (transparente, mostra-se "livre") + gestor recebe aviso no WhatsApp →
   gestor responde **OK** (passa a ✅ CONFIRMADO, opaco) ou **NÃO**
   (provisório apagado, cliente avisado para escolher outra hora).
+- Se o horário pedir já estiver ocupado, o bot coloca o cliente na **lista de espera** e sugere horários alternativos (±1h, ±2h).
 - O gestor vê a fila com a palavra `pendentes`.
+- **Lembretes automáticos:** 24h antes da consulta e confirmação 2h antes (cron às 09:00 ou via `npm run lembretes`).
 - Dúvidas simples: horário, morada, preço base, o que trazer.
   Sempre com o link de agendamento: `LINK_AGENDAMENTO`.
 - **Urgência** (sangue, não respira, envenenamento, acidente): manda ligar já para a clínica, não agenda nem espera OK.
 - Fora de horário: regista pedido e diz que confirmam de manhã.
 - Tudo em PT-PT, mensagens curtas (≤ 2 SMS), sem rodeios.
+- **Verificação automática:** `node src/config/verificar-respostas.js` (14 cenários de resposta).
+- **Backup automático:** `node scripts/backup-dados.js` (cópia dos JSON de dados com timestamp).
 
 ## 6. Custos reais
 
