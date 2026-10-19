@@ -49,6 +49,8 @@ agente-whatsapp-cvf/
 │   ├── backup-dados.js     ← backup automático dos JSON de dados
 │   └── lembretes-diarios.js← envia lembretes e encerra (cron)
 ├── src/
+│   ├── prompts/
+│   │   └── luna.md         ← persona da assistente virtual (tom, triagem, restrições)
 │   ├── index.js            ← arranque: valida env + gateway + atendimento
 │   ├── config/
 │   │   ├── env.js          ← valida variáveis obrigatórias na inicialização
