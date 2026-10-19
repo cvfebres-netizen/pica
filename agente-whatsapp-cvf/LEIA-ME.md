@@ -49,6 +49,8 @@ agente-whatsapp-cvf/
 │   ├── backup-dados.js     ← backup automático dos JSON de dados
 │   └── lembretes-diarios.js← envia lembretes e encerra (cron)
 ├── src/
+│   ├── prompts/
+│   │   └── centro-veterinario-de-febres.md ← persona e regras de triagem da clínica
 │   ├── index.js            ← arranque: valida env + gateway + atendimento
 │   ├── config/
 │   │   ├── env.js          ← valida variáveis obrigatórias na inicialização
