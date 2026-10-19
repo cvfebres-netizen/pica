@@ -20,6 +20,8 @@ function valoresBase() {
 module.exports = {
   ajuda: (lang) => Idiomas.t(lang, 'ajuda', valoresBase()),
   urgencia: (lang) => Idiomas.t(lang, 'urgencia', valoresBase()),
+  sintomasLigeiros: (lang) => Idiomas.t(lang, 'sintomasLigeiros', valoresBase()),
+  equipaFala: (lang) => Idiomas.t(lang, 'equipaFala', valoresBase()),
   horario: (lang) => Idiomas.t(lang, 'horario', valoresBase()),
   morada: (lang) => Idiomas.t(lang, 'morada', valoresBase()),
   precos: (lang) => Idiomas.t(lang, 'precos', valoresBase()),

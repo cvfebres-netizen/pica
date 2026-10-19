@@ -28,6 +28,9 @@ function souGestor(de) {
 
 const RE = {
   urgencia: /(sangue|hemorragia|nao respira|n[ãa]o respira|envenen|atropel|acidente|convuls|desmai|moribund|urgente|emergencia)/i,
+  sintomasLigeiros: /(v[oô]mito|diarreia|coceira|falta.*apetite|espirr|tosse|fraqueza|apatia|letargia)/i,
+  panico: /(deses|p[êe]nico|ang[úu]stia|socorro|estou a perder|morrer|vai morrer)/i,
+  agressivo: /(est[ou]pid|idiota|in[úu]til|lixo|pior|odiar|odeio|imbecil|merda|caralho|puta|foda)/i,
   ok: /^(ok|sim|confirmo|confirma|aprov|pode|segue|força|forca)\b/i,
   nao: /^(nao|não|cancela|rejeita|esquece)(\b|[^a-zà-ÿ])/i,
   cancelar: /(cancel|desmarc)/i,
@@ -56,6 +59,14 @@ async function encaminhar({ de, texto }, enviar) {
     if (RE.pendentes.test(texto)) return pendentes.resumo();
   }
   if (RE.urgencia.test(texto)) return R.urgencia(lang);
+  if (RE.panico.test(texto) || RE.agressivo.test(texto)) {
+    Esc.resetar(de);
+    const gNum = (process.env.NUMERO_GESTOR || '').replace(/\D/g, '');
+    const gJid = gNum ? gNum + '@s.whatsapp.net' : '';
+    if (gJid && enviar) await enviar(gJid, '⚠️ Escalation (pânico/agressividade): ' + de + ' precisa de atendimento humano imediato.');
+    return R.equipaFala(lang);
+  }
+  if (RE.sintomasLigeiros.test(texto)) return R.sintomasLigeiros(lang);
   if (RE.cancelar.test(texto)) {
     const p = pendentes.criar({ tipo: 'cancelar', cliente: de, texto });
     Esc.resetar(de);

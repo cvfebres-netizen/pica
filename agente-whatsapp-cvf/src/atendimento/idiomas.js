@@ -9,7 +9,8 @@ const FICHA = path.join(__dirname, '..', 'dados', 'idiomas-clientes.json');
 const TEXTOS = {
   'pt-PT': {
     ajuda: 'Olá, {nome}. Quer marcar consulta? Diga: animal, motivo e dia/hora. Ou marque aqui: {link}',
-    urgencia: 'É urgente. Ligue já para {tel}. Não espere aqui.',
+    urgencia: '🚨 EMERGÊNCIA. Ligue já para {tel} ou desloque-se imediatamente à clínica: {morada}. Não espere.',
+    sintomasLigeiros: 'Lamento que o seu animal não se esteja a sentir bem. Como sou uma inteligência artificial, não posso diagnosticar nem medicar. Para a segurança dele, precisa de ser avaliado por um veterinário. Há quantos dias o sintoma se manifesta? Posso ajudar a marcar uma consulta.',
     horario: '{horario}. Marque aqui: {link}',
     morada: '{morada}. Marque aqui: {link}',
     precos: 'Preço depende do ato. Consulta base e vacinas têm tabela na clínica. Diga o motivo que confirmo.',
@@ -29,7 +30,8 @@ const TEXTOS = {
   },
   'en': {
     ajuda: 'Hello, {nome}. Want to book an appointment? Say: animal, reason and day/time. Or book here: {link}',
-    urgencia: 'It is urgent. Call {tel} now. Do not wait here.',
+    urgencia: '🚨 EMERGENCY. Call {tel} now or go immediately to the clinic: {morada}. Do not wait.',
+    sintomasLigeiros: "I'm sorry your pet isn't feeling well. As an AI, I cannot diagnose or medicate. For their safety, they need to be assessed by a veterinarian. How many days has the symptom been present? Can I help you book an appointment?",
     horario: '{horario}. Book here: {link}',
     morada: '{morada}. Book here: {link}',
     precos: 'Price depends on the procedure. Base consultation and vaccines have a price list at the clinic. Tell me the reason and I will confirm.',
