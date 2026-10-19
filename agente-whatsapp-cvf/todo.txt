@@ -53,6 +53,9 @@
 ### Idiomas (src/atendimento/idiomas.js)
 - Dicionário PT-PT/EN, deteta por prefixo /pt ou /en
 
+### Prompts (src/prompts/)
+- `src/prompts/centro-veterinario-de-febres.md` — persona e regras de triagem (3 passos) da entidade; sem nomes pessoais, sempre Centro Veterinário de Febres
+
 ### Transcrição (src/atendimento/transcricao.js)
 - Stub para whisper.cpp ou OpenAI Whisper
 
@@ -124,6 +127,7 @@
 | scripts/lembretes-diarios.js | Script de lembretes diários |
 | scripts/instalar.bat | Instalador standalone Windows |
 | test/simulador.js | Simulador de testes |
+| src/prompts/centro-veterinario-de-febres.md | Persona e regras de triagem da entidade (sem nomes pessoais) |
 | .env.exemplo | Variáveis de ambiente (exemplo) |
 
 Última atualização: 19/10/2026
