@@ -1,0 +1,19 @@
+# Dependencias
+node_modules/
+
+# Ambiente
+.env
+*.env
+
+# Estado de runtime gerado pelos testes e pela execucao do bot
+src/dados/*.json
+src/dados/backups/
+src/logs/
+*.log
+
+# Sessao/auth do gateway WhatsApp (baileys)
+auth_info/
+
+# OS
+.DS_Store
+Thumbs.db
