@@ -150,6 +150,29 @@ async function encaminhar({ de, texto }, enviar) {
   }
   const dados = extrairPedido(texto);
   if (RE.marcar.test(texto)) {
+    // Regras de serviço (contacto direto / horário preferencial) aplicam-se
+    // também ao ramo rápido, antes de criar o pendente.
+    const servRapido = servicos.detetarServico(texto);
+    if (servRapido.contactoDireto) { Esc.resetar(de); return R.contactoDireto(servRapido.id, lang); }
+    // Texto com animal+dia+hora segue o fluxo rápido de pendente.
+    // Só abre o formulário quando faltam dados E o texto não traz dados.
+    if ((!dados.animal || !dados.dia || !dados.hora) && !Form.temFormularioAberto(de)) {
+      const r = Form.processar({ de, texto });
+      if (r && Form.temFormularioAberto(de)) return r.resposta;
+      // processar() recusou: cai no fluxo rápido / escalation normal.
+    }
+    if (Form.temFormularioAberto(de)) {
+      const r2 = Form.processar({ de, texto });
+      if (r2) return r2.resposta;
+    }
+    // Horário preferencial do serviço (ex: banho/tosquia só 10:00 ou 14:30).
+    if (servRapido.horarioPreferencial) {
+      const hhmmRapido = normalizarHora(dados.hora);
+      if (hhmmRapido && !servRapido.horarioPreferencial.includes(hhmmRapido)) {
+        Esc.resetar(de);
+        return R.horarioPreferencial(servRapido.id, lang);
+      }
+    }
     const horaNorm = normalizarHora(dados.hora);
     let sugestao = '';
     try {
