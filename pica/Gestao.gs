@@ -661,3 +661,141 @@ function limparSessoesExpiradas(token) {
     return { sucesso: true, marcadas: marcadas };
   } finally { lock.releaseLock(); }
 }
+
+/* ============================================================
+   ASSINATURA DIGITAL — RELATÓRIO MENSAL
+   ============================================================ */
+function registarAssinaturaMes(token, mes, tipo, assinatura) {
+  const s = exigirSessao_(token);
+  const userId = String(s.userId);
+  const user = obterUtilizadorPorId_(userId);
+  const agora = new Date();
+  const id = 'ASS_' + Utilities.getUuid().replace(/-/g, '').substring(0, 16).toUpperCase();
+  const lock = adquirirLock_(15000);
+  try {
+    const sheet = getSpreadsheet_().getSheetByName(SHEETS.ASSINATURAS);
+    if (!sheet) throw new Error('Folha ASSINATURAS não encontrada.');
+    sheet.appendRow([
+      id,
+      formatarDataISO_(agora),
+      String(mes),
+      userId,
+      user ? user.Nome : '',
+      String(tipo),
+      String(assinatura || ''),
+      'ASSINADO',
+      agora,
+      agora
+    ]);
+    registarAuditoriaSegura_(s, 'ASSINAR_RELATORIO', 'Mês ' + mes + ' tipo ' + tipo);
+    return { sucesso: true, id: id };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function consultarAssinaturaMes(token, mes, userId) {
+  const s = exigirSessao_(token);
+  const alvo = userId ? String(userId) : String(s.userId);
+  if (alvo !== String(s.userId) && String(s.perfil || '').toUpperCase() !== 'ADMIN') {
+    throw new Error('Sem permissão.');
+  }
+  const f = dadosFolha_(SHEETS.ASSINATURAS);
+  if (!f || !f.sheet || f.valores.length < 2) {
+    return serializarParaFrontend_({ sucesso: true, assinatura: null });
+  }
+  const dados = f.valores, mapa = f.mapa;
+  for (let i = dados.length - 1; i >= 1; i--) {
+    if (String(dados[i][mapa.UserID]) === alvo && String(dados[i][mapa.Mes]) === String(mes)) {
+      return serializarParaFrontend_({
+        sucesso: true,
+        assinatura: {
+          id: dados[i][mapa.ID],
+          data: dados[i][mapa.Data],
+          mes: dados[i][mapa.Mes],
+          tipo: dados[i][mapa.Tipo],
+          assinatura: dados[i][mapa.Assinatura],
+          estado: dados[i][mapa.Estado]
+        }
+      });
+    }
+  }
+  return serializarParaFrontend_({ sucesso: true, assinatura: null });
+}
+
+/* ============================================================
+   WORKFLOW DE AUSENÇÕES — Pedido → Aprovação
+   ============================================================ */
+function pedirAusencia(token, dataInicio, dataFim, tipo, motivo) {
+  const s = exigirSessao_(token);
+  const userId = String(s.userId);
+  const user = obterUtilizadorPorId_(userId);
+  const agora = new Date();
+  const id = 'AUSE_' + Utilities.getUuid().replace(/-/g, '').substring(0, 16).toUpperCase();
+  const lock = adquirirLock_(15000);
+  try {
+    const sheet = getSpreadsheet_().getSheetByName(SHEETS.AUSENCIAS);
+    if (!sheet) throw new Error('Folha AUSENCIAS não encontrada.');
+    sheet.appendRow([
+      id,
+      formatarDataISO_(dataInicio),
+      formatarDataISO_(dataFim),
+      userId,
+      user ? user.Nome : '',
+      String(tipo),
+      'PENDENTE',
+      String(motivo || ''),
+      String(s.userId),
+      agora,
+      agora
+    ]);
+    registarAuditoriaSegura_(s, 'PEDIR_AUSENCIA', tipo + ' ' + dataInicio + ' a ' + dataFim);
+    return { sucesso: true, id: id };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function listarAusenciasPendentes(token) {
+  const s = exigirAdmin_(token);
+  const f = dadosFolha_(SHEETS.AUSENCIAS);
+  if (!f || !f.sheet || f.valores.length < 2) {
+    return serializarParaFrontend_({ sucesso: true, ausencias: [], total: 0 });
+  }
+  const dados = f.valores, mapa = f.mapa, out = [];
+  for (let i = 1; i < dados.length; i++) {
+    if (String(dados[i][mapa.Estado]) !== 'PENDENTE') continue;
+    out.push({
+      id: dados[i][mapa.ID],
+      dataInicio: dados[i][mapa.DataInicio],
+      dataFim: dados[i][mapa.DataFim],
+      userId: dados[i][mapa.UserID],
+      nome: dados[i][mapa.Nome],
+      tipo: dados[i][mapa.Tipo],
+      estado: dados[i][mapa.Estado],
+      motivo: dados[i][mapa.Motivo],
+      criadoPor: dados[i][mapa.CriadoPor]
+    });
+  }
+  return serializarParaFrontend_({ sucesso: true, ausencias: out, total: out.length });
+}
+
+function decidirAusencia(token, id, estado, observacoes) {
+  const s = exigirAdmin_(token);
+  const lock = adquirirLock_(15000);
+  try {
+    const info = obterLinhaPorId_(SHEETS.AUSENCIAS, id);
+    if (!info) throw new Error('Ausência não encontrada.');
+    if (String(info.values[info.mapa.Estado]) !== 'PENDENTE') throw new Error('Ausência já decidida.');
+    const agora = new Date();
+    info.sheet.getRange(info.row, info.mapa.Estado + 1).setValue(estado);
+    info.sheet.getRange(info.row, info.mapa.AprovadoPor + 1).setValue(s.userId);
+    info.sheet.getRange(info.row, info.mapa.DataAprovacao + 1).setValue(agora);
+    info.sheet.getRange(info.row, info.mapa.AtualizadoEm + 1).setValue(agora);
+    if (observacoes) info.sheet.getRange(info.row, info.mapa.Motivo + 1).setValue(String(observacoes));
+    registarAuditoriaSegura_(s, 'DECIDIR_AUSENCIA', id + ' -> ' + estado);
+    return { sucesso: true, id: id, estado: estado };
+  } finally {
+    lock.releaseLock();
+  }
+}

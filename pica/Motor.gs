@@ -341,10 +341,10 @@ function determinarExcecoes_(userId, data, tipoDia, picagens, intervalos, segmen
     if ((tipoDia === ENUMS.TIPOS_DIA.UTIL || tipoDia === ENUMS.TIPOS_DIA.SABADO_PREVISTO) && ehEntrada && m < 600) {
       excecoes.push({ tipo: 'ENTRADA_ANTECIPADA', descricao: 'Entrada registada antes das 10:00.' });
     }
-    if (tipoDia === ENUMS.TIPOS_DIA.UTIL && ehSaida && m > 1140) {
-      excecoes.push({ tipo: 'SAIDA_TARDIA', descricao: 'Saída registada depois das 19:00.' });
+    if (tipoDia === ENUMS.TIPOS_DIA.UTIL && ehSaida && m > 1200) {
+      excecoes.push({ tipo: 'SAIDA_TARDIA', descricao: 'Saída registada depois das 20:00.' });
     }
-    if (tipoDia === ENUMS.TIPOS_DIA.SABADO_PREVISTO && ehSaida && m > 1140) {
+    if (tipoDia === ENUMS.TIPOS_DIA.SABADO_PREVISTO && ehSaida && m > 1200) {
       excecoes.push({ tipo: 'SAIDA_SABADO_TARDIA', descricao: 'Saída registada depois das 19:00 num sábado de escala.' });
     }
     if (m > 780 && m < 870) {
@@ -400,4 +400,5 @@ function calcularDia_(userId, data) {
 
 function calcularMeuDia(token, data) { const s = exigirSessao_(token); return serializarParaFrontend_(calcularDia_(s.userId, data || new Date())); }
 function calcularDiaAdmin(token, userId, data) { exigirAdmin_(token); return serializarParaFrontend_(calcularDia_(userId, data || new Date())); }
+
 

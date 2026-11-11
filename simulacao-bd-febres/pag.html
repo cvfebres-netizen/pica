@@ -1,0 +1,41 @@
+<!doctype html><html lang="pt"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BD Febres — servidor local</title>
+<style>
+body{font-family:system-ui,Arial,sans-serif;max-width:900px;margin:24px auto;padding:0 16px;color:#222}
+input,select,button{font-size:15px;padding:8px;margin:4px}
+button{cursor:pointer}#out{white-space:pre-wrap;background:#f6f6f6;padding:12px;border-radius:8px}
+.card{border:1px solid #ddd;border-radius:8px;padding:12px;margin:8px 0}
+</style></head><body>
+<h1>BD Febres — servidor local</h1>
+<p id="st">A carregar a base de dados…</p>
+<div class="card"><b>Pesquisar tutor</b><br>
+<input id="q" placeholder="nome (ex: silva, costa…)" size="30">
+<button onclick="pesq('tutor')">Pesquisar</button></div>
+<div class="card"><b>Pesquisar animal</b><br>
+<input id="qa" placeholder="nome (ex: puppy, fiel…)" size="30">
+<button onclick="pesq('animal')">Pesquisar</button></div>
+<div class="card"><b>Ficha de animal (id)</b><br>
+<input id="fid" placeholder="ex: 1" size="10">
+<button onclick="ficha()">Abrir ficha</button></div>
+<div class="card"><b>Ver tabela</b><br>
+<select id="tab"></select>
+<button onclick="verTab()">Ver 20 linhas</button></div>
+<div id="out">…</div>
+<script>
+function j(u){return fetch(u).then(function(r){return r.json()})}
+function show(o){document.getElementById('out').textContent=JSON.stringify(o,null,1).slice(0,6000)}
+function pesq(tipo){
+var q=tipo==='tutor'?document.getElementById('q').value:document.getElementById('qa').value;
+j('/api/pesquisar?tipo='+tipo+'&q='+encodeURIComponent(q)).then(show);
+}
+function ficha(){j('/api/animal/'+encodeURIComponent(document.getElementById('fid').value)).then(show)}
+function verTab(){var t=document.getElementById('tab').value;j('/api/tabela/'+t+'?limite=20').then(show)}
+j('/api/estado').then(function(e){
+document.getElementById('st').textContent=e.pronta?
+('Pronta: '+e.tabelas+' tabelas, '+e.linhas+' linhas ('+e.tutores+' tutores, '+e.animais+' animais, '+e.visitas+' visitas).'):
+('A carregar há '+e.espera_s+'s… recarrega a página.');
+if(e.pronta)j('/api/tabelas').then(function(t){
+document.getElementById('tab').innerHTML=t.tabelas.map(function(x){return '<option>'+x.nome+'</option>'}).join('')});
+});
+</script></body></html>

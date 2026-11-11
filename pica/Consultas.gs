@@ -250,3 +250,154 @@ function listarErros(token, filtros) {
   }
   return serializarParaFrontend_({ sucesso: true, registos: registos, total: registos.length });
 }
+
+/* ============================================================
+   RELATÓRIO DE PICAGENS (intervalo, opcionalmente por utilizador)
+   Chamada pelo frontend: consultarRelatorioPicagens(token, dataInicio, dataFim, userId)
+   ============================================================ */
+function consultarRelatorioPicagens(token, dataInicio, dataFim, userId) {
+  const s = exigirSessao_(token);
+  const alvo = userId ? String(userId) : String(s.userId);
+  /* Apenas o próprio utilizador ou um ADMIN pode consultar picagens de outro. */
+  if (alvo !== String(s.userId) && String(s.perfil || s.Perfil || '').toUpperCase() !== 'ADMIN') {
+    throw new Error('Nao tem permissao para consultar picagens de outro utilizador.');
+  }
+  const f = dadosFolha_(SHEETS.PICAGENS);
+  if (!f || !f.sheet || f.valores.length < 2) {
+    return serializarParaFrontend_({ sucesso: true, picagens: [], total: 0 });
+  }
+  const dados = f.valores, mapa = f.mapa, out = [];
+  const ini = dataInicio ? String(dataInicio) : '';
+  const fim = dataFim ? String(dataFim) : '';
+  for (let i = 1; i < dados.length; i++) {
+    if (String(dados[i][mapa.UserID]) !== alvo) continue;
+    const iso = valorDataISO_(dados[i][mapa.Data]);
+    if (ini && iso < ini) continue;
+    if (fim && iso > fim) continue;
+    out.push({
+      id: String(dados[i][mapa.ID]),
+      data: iso,
+      dataHora: dados[i][mapa.DataHora],
+      tipo: String(dados[i][mapa.Tipo] || ''),
+      origem: String(dados[i][mapa.Origem] || ''),
+      nome: String(dados[i][mapa.Nome] || ''),
+      userId: String(dados[i][mapa.UserID])
+    });
+  }
+  out.sort(function(a, b) { return new Date(a.dataHora) - new Date(b.dataHora); });
+  return serializarParaFrontend_({ sucesso: true, picagens: out, total: out.length });
+}
+
+/* ============================================================
+   ESCALA MENSAL VISUAL — Quem trabalha cada dia
+   ============================================================ */
+function listarEscalaMes(token, mes) {
+  const s = exigirAdmin_(token);
+  const base = mes && /^\d{4}-\d{2}$/.test(String(mes)) ? String(mes) : Utilities.formatDate(new Date(), APP.TIMEZONE, 'yyyy-MM');
+  const ano = Number(base.substring(0, 4)), mm = Number(base.substring(5, 7));
+  const inicio = new Date(ano, mm - 1, 1);
+  const fim = new Date(ano, mm, 0);
+  const utilizadores = obterUtilizadoresAtivos_();
+  const escala = [];
+  utilizadores.forEach(function (u) {
+    for (let d = new Date(inicio); d <= fim; d.setDate(d.getDate() + 1)) {
+      const r = calcularDia_(u.ID, d);
+      escala.push({
+        data: formatarDataISO_(d),
+        userId: u.ID,
+        nome: u.Nome,
+        tipoDia: r.tipoDia,
+        estado: r.estado,
+        minutosTrabalhados: r.minutosTrabalhados || 0,
+        minutosExtra: r.minutosExtra || 0,
+        picagens: r.picagens ? r.picagens.length : 0
+      });
+    }
+  });
+  return serializarParaFrontend_({ sucesso: true, escala: escala, mes: base, total: escala.length });
+}
+/* ============================================================
+   DASHBOARD — Gráficos para o painel administrativo
+   ============================================================ */
+function getHorasExtraMes(token, mes, userId) {
+  const s = exigirSessao_(token);
+  const alvo = userId ? String(userId) : String(s.userId);
+  if (alvo !== String(s.userId) && String(s.perfil || s.Perfil || '').toUpperCase() !== 'ADMIN') {
+    throw new Error('Sem permissão.');
+  }
+  const f = dadosFolha_(SHEETS.PICAGENS);
+  if (!f || !f.sheet || f.valores.length < 2) {
+    return serializarParaFrontend_({ sucesso: true, horasExtra: 0, total: 0 });
+  }
+  const dados = f.valores, mapa = f.mapa, agora = new Date();
+  const base = mes && /^\d{4}-\d{2}$/.test(String(mes)) ? String(mes) : Utilities.formatDate(agora, APP.TIMEZONE, 'yyyy-MM');
+  const inicio = new Date(base.substring(0, 4), Number(base.substring(5, 7)) - 1, 1);
+  const fim = new Date(base.substring(0, 4), Number(base.substring(5, 7)), 0);
+  let totalMin = 0, totalCount = 0;
+  for (let i = 1; i < dados.length; i++) {
+    if (String(dados[i][mapa.UserID]) !== alvo) continue;
+    const iso = valorDataISO_(dados[i][mapa.Data]);
+    if (iso < inicio || iso > fim) continue;
+    totalMin += Number(dados[i][mapa.MinutosExtra] || 0);
+    totalCount++;
+  }
+  return serializarParaFrontend_({ sucesso: true, horasExtra: minutosParaHora_(totalMin), total: totalCount });
+}
+
+function getAssiduidadeUtilizador(token, userId, mes) {
+  const s = exigirSessao_(token);
+  const alvo = userId ? String(userId) : String(s.userId);
+  if (alvo !== String(s.userId) && String(s.perfil || s.Perfil || '').toUpperCase() !== 'ADMIN') {
+    throw new Error('Sem permissão.');
+  }
+  const f = dadosFolha_(SHEETS.DIAS_TRABALHO);
+  if (!f || !f.sheet || f.valores.length < 2) {
+    return serializarParaFrontend_({ sucesso: true, dados: [] });
+  }
+  const dados = f.valores, mapa = f.mapa, agora = new Date();
+  const base = mes && /^\d{4}-\d{2}$/.test(String(mes)) ? String(mes) : Utilities.formatDate(agora, APP.TIMEZONE, 'yyyy-MM');
+  const inicio = new Date(base.substring(0, 4), Number(base.substring(5, 7)) - 1, 1);
+  const fim = new Date(base.substring(0, 4), Number(base.substring(5, 7)), 0);
+  const out = [];
+  for (let i = 1; i < dados.length; i++) {
+    if (String(dados[i][mapa.UserID]) !== alvo) continue;
+    const iso = valorDataISO_(dados[i][mapa.Data]);
+    if (iso < inicio || iso > fim) continue;
+    out.push({
+      data: dados[i][mapa.Data],
+      tipoDia: dados[i][mapa.TipoDia],
+      minutosPlaneados: dados[i][mapa.MinutosPlaneados] || 0,
+      minutosTrabalhados: dados[i][mapa.MinutosTrabalhados] || 0,
+      minutosExtra: dados[i][mapa.MinutosExtra] || 0,
+      estado: dados[i][mapa.Estado]
+    });
+  }
+  return serializarParaFrontend_({ sucesso: true, dados: out });
+}
+
+function getFaltasPicagemMes(token, mes, userId) {
+  const s = exigirSessao_(token);
+  const alvo = userId ? String(userId) : String(s.userId);
+  if (alvo !== String(s.userId) && String(s.perfil || s.Perfil || '').toUpperCase() !== 'ADMIN') {
+    throw new Error('Sem permissão.');
+  }
+  const f = dadosFolha_(SHEETS.DIAS_TRABALHO);
+  if (!f || !f.sheet || f.valores.length < 2) {
+    return serializarParaFrontend_({ sucesso: true, faltas: 0 });
+  }
+  const dados = f.valores, mapa = f.mapa, agora = new Date();
+  const base = mes && /^\d{4}-\d{2}$/.test(String(mes)) ? String(mes) : Utilities.formatDate(agora, APP.TIMEZONE, 'yyyy-MM');
+  const inicio = new Date(base.substring(0, 4), Number(base.substring(5, 7)) - 1, 1);
+  const fim = new Date(base.substring(0, 4), Number(base.substring(5, 7)), 0);
+  let faltas = 0;
+  for (let i = 1; i < dados.length; i++) {
+    if (String(dados[i][mapa.UserID]) !== alvo) continue;
+    const iso = valorDataISO_(dados[i][mapa.Data]);
+    if (iso < inicio || iso > fim) continue;
+    if (dados[i][mapa.Estado] === 'INCOMPLETO' || !dados[i][mapa.MinutosTrabalhados]) {
+      faltas++;
+    }
+  }
+  return serializarParaFrontend_({ sucesso: true, faltas: faltas });
+}
+

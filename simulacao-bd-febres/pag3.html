@@ -1,0 +1,32 @@
+<!doctype html><html lang="pt"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BD Febres — explorador completo</title>
+<style>
+body{font-family:system-ui,Arial,sans-serif;max-width:1200px;margin:24px auto;padding:0 16px;color:#222}
+input,select,button{font-size:15px;padding:8px;margin:4px}
+button{cursor:pointer;background:#0b6e4f;color:#fff;border:0;border-radius:6px;padding:8px 14px}
+button.sec{background:#eee;color:#222}
+.card{border:1px solid #ddd;border-radius:8px;padding:12px;margin:8px 0}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{border:1px solid #ddd;padding:6px 8px;text-align:left;vertical-align:top}
+th{background:#0b6e4f;color:#fff;position:sticky;top:0}
+tr:nth-child(even){background:#f7faf8}
+a.lig{color:#0b6e4f;font-weight:600;cursor:pointer;text-decoration:underline}
+.tag{display:inline-block;background:#e6f2ec;border-radius:10px;padding:1px 8px;font-size:12px;margin-right:4px}
+.mut{color:#666;font-size:13px}
+.miga{margin:8px 0;font-size:14px}
+.miga a{color:#0b6e4f;cursor:pointer;margin-right:6px}
+#busca{width:60%}
+tr.clicavel{cursor:pointer}tr.clicavel:hover{background:#eef7f1}
+</style></head><body>
+<h1>BD Febres — explorador completo</h1>
+<p id="st" class="mut">A carregar a base de dados…</p>
+<div class="card"><b>Busca global</b> <span class="mut">nome, telefone, NIF, microchip, n., data, produto, motivo…</span><br>
+<input id="busca" placeholder="ex: silva · 932290927 · 620098100757015 · vacina · 2024-05" onkeydown="if(event.key==='Enter')irBusca()">
+<button onclick="irBusca()">Buscar</button>
+<button class="sec" onclick="irHist()">Historico geral</button></div>
+<div class="miga" id="miga"></div>
+<div id="saida"><p class="mut">Escreve uma pista e prime Buscar, ou abre o historico geral.</p></div>
+<script src="app3.js"></script>
+<script src="app3b.js"></script>
+</body></html>

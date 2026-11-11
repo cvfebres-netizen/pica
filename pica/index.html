@@ -20,6 +20,7 @@
      navegador pinta os controlos nativos escuros no modo escuro do sistema
      e os campos ficam com texto claro sobre fundo escuro. -->
 <meta name="color-scheme" content="light">
+<link rel="manifest" href="manifest.json">
 <title>Sistema de Picagem de Ponto</title>
 
 <style>
@@ -55,6 +56,86 @@
   --safe-r:env(safe-area-inset-right,0px);
   /* Alvo mínimo de toque (WCAG 2.5.5 / Material): 44px em ecrãs táteis. */
   --tap:44px
+}
+
+/* =========================================================
+   MODO ESCURO
+   ========================================================= */
+body.dark{
+  --bg:#141c22;
+  --card:#1f2a33;
+  --bd:#33424d;
+  --hair:#2a3842;
+  --txt:#e8eef1;
+  --mut:#9fb0b8;
+  --pl:#0e2a33;
+  --okl:#163a24;
+  --warnl:#3a2f10;
+  --errl:#3d1a16;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 16px rgba(0,0,0,.25);
+}
+body.dark .search-box input,
+body.dark .filter-group select,
+body.dark .filter-group input{
+  background:#141c22;
+  color:var(--txt);
+  border-color:var(--bd);
+}
+body.dark .search-actions button{
+  background:#141c22;
+  color:var(--txt);
+  border-color:var(--bd);
+}
+body.dark .search-actions button.primary{
+  background:var(--p);
+}
+body.dark .tag{
+  background:#1f2a33;
+  border-color:var(--hair);
+  color:var(--p);
+}
+body.dark .modal-card{
+  background:var(--card);
+  color:var(--txt);
+}
+body.dark .qr-input-group input{
+  background:#141c22;
+  color:var(--txt);
+  border-color:var(--bd);
+}
+
+/* =========================================================
+   ASSINATURA DIGITAL — Canvas
+   ========================================================= */
+#modalAssinatura .canvas-border{
+  border:1px solid var(--bd);
+  background:#fff;
+  border-radius:var(--r);
+  cursor:crosshair;
+  touch-action:none;
+}
+body.dark #modalAssinatura .canvas-border{
+  background:#141c22;
+}
+#btnLimparAssinatura,#btnConfirmarAssinatura{
+  padding:10px 16px;
+  border-radius:var(--r);
+  border:none;
+  font-size:14px;
+  cursor:pointer;
+}
+#btnLimparAssinatura{
+  background:transparent;
+  border:1px solid var(--bd);
+  color:var(--mut);
+}
+#btnConfirmarAssinatura{
+  background:var(--p);
+  color:#fff;
+}
+#btnConfirmarAssinatura:disabled{
+  opacity:.5;
+  cursor:not-allowed;
 }
 
 *{
@@ -143,6 +224,322 @@ button,.tab,.mini,.head-btn,.punch{
 
 @keyframes spin{
   to{transform:rotate(360deg)}
+}
+
+/* =========================================================
+   BUSCA INTELIGENTE — RELATÓRIOS
+   ========================================================= */
+
+#searchCard{
+  margin:16px 12px 8px;
+}
+
+.search-header{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  margin-bottom:12px;
+}
+
+.search-box{
+  position:relative;
+  width:100%;
+}
+
+.search-box input{
+  width:100%;
+  padding:12px 14px 12px 40px;
+  border:1px solid var(--bd);
+  border-radius:var(--r);
+  background:var(--card);
+  font-size:15px;
+  outline:none;
+  transition:border-color .2s
+}
+
+.search-box input:focus{
+  border-color:var(--p);
+  box-shadow:0 0 0 3px rgba(15,91,120,.12)
+}
+
+.search-box .search-icon{
+  position:absolute;
+  left:12px;
+  top:50%;
+  transform:translateY(-50%);
+  color:var(--mut)
+}
+
+.search-tags{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:4px
+}
+
+.tag{
+  display:inline-flex;
+  align-items:center;
+  background:var(--pl);
+  color:var(--p);
+  border:1px solid var(--hair);
+  border-radius:20px;
+  padding:4px 10px;
+  font-size:13px;
+  cursor:pointer;
+  transition:all .2s
+}
+
+.tag:hover{
+  background:var(--p);
+  color:#fff
+}
+
+.tag.remove{
+  background:#ffecec;
+  color:var(--err);
+  border-color:#ffdede
+}
+
+.tag.remove:hover{
+  background:var(--err);
+  color:#fff
+}
+
+.tag .tag-remove{
+  margin-left:6px;
+  font-weight:bold;
+  line-height:1
+}
+
+.search-filters{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-bottom:12px;
+  padding:12px;
+  background:var(--card);
+  border:1px solid var(--hair);
+  border-radius:var(--r)
+}
+
+.filter-group{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  min-width:120px
+}
+
+.filter-group label{
+  font-size:12px;
+  color:var(--mut);
+  font-weight:600
+}
+
+.filter-group select,.filter-group input{
+  padding:8px 10px;
+  border:1px solid var(--bd);
+  border-radius:6px;
+  background:#fff;
+  font-size:14px;
+  outline:none
+}
+
+.filter-group select:focus,.filter-group input:focus{
+  border-color:var(--p)
+}
+
+.search-actions{
+  display:flex;
+  gap:8px;
+  margin-bottom:12px
+}
+
+.search-actions button{
+  flex:1;
+  padding:10px 14px;
+  border:1px solid var(--bd);
+  border-radius:var(--r);
+  background:var(--card);
+  color:var(--txt);
+  font-size:14px;
+  font-weight:600;
+  cursor:pointer;
+  transition:all .2s
+}
+
+.search-actions button:hover{
+  border-color:var(--p);
+  color:var(--p)
+}
+
+.search-actions button.primary{
+  background:var(--p);
+  color:#fff;
+  border-color:var(--p)
+}
+
+.search-actions button.primary:hover{
+  background:var(--pd)
+}
+
+.export-btn{
+  margin-bottom:12px;
+  text-align:right
+}
+
+.export-btn button{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:10px 16px;
+  border:1px solid var(--hair);
+  border-radius:var(--r);
+  background:var(--card);
+  color:var(--txt);
+  font-size:14px;
+  font-weight:600;
+  cursor:pointer;
+  transition:all .2s
+}
+
+.export-btn button:hover{
+  background:var(--pl);
+  border-color:var(--p);
+  color:var(--p)
+}
+
+.export-btn .export-icon{
+  font-size:14px
+}
+
+.search-results{
+  margin-bottom:16px
+}
+
+.results-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:8px;
+  padding:8px 12px;
+  background:var(--pl);
+  border-radius:var(--r)
+}
+
+.results-count{
+  font-size:13px;
+  color:var(--mut);
+  font-weight:600
+}
+
+.results-table{
+  width:100%;
+  border-collapse:collapse;
+  background:var(--card);
+  border-radius:var(--r);
+  overflow:hidden;
+  border:1px solid var(--hair)
+}
+
+.results-table th{
+  background:var(--bg);
+  color:var(--mut);
+  font-size:12px;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.05em;
+  padding:10px 12px;
+  text-align:left;
+  border-bottom:1px solid var(--hair)
+}
+
+.results-table td{
+  padding:10px 12px;
+  font-size:14px;
+  border-bottom:1px solid var(--hair)
+}
+
+.results-table tr:last-child td{
+  border-bottom:none
+}
+
+.results-table tr:hover{
+  background:var(--pl)
+}
+
+.empty-state{
+  text-align:center;
+  padding:40px 20px;
+  color:var(--mut)
+}
+
+.empty-state .empty-icon{
+  font-size:48px;
+  margin-bottom:16px;
+  opacity:.5
+}
+
+.empty-state h3{
+  color:var(--txt);
+  margin-bottom:8px;
+  font-size:18px
+}
+
+.empty-state p{
+  font-size:14px;
+  max-width:400px;
+  margin:0 auto
+}
+
+.hour-cell{
+  font-family:var(--num);
+  font-weight:600
+}
+
+.extra-cell{
+  color:var(--warn)
+}
+
+.normal-cell{
+  color:var(--p)
+}
+
+.empty-cell{
+  color:#c0392b
+}
+
+/* Print styles — apenas o que importa no relatório */
+@media print{
+  body{
+    background:#fff !important
+  }
+  .no-print{
+    display:none !important
+  }
+  .print-table{
+    width:100%;
+    border-collapse:collapse
+  }
+  .print-table th,.print-table td{
+    border:1px solid #000 !important;
+    padding:6px 8px;
+    font-size:11px
+  }
+  .print-header{
+    text-align:center;
+    margin-bottom:20px
+  }
+  .print-title{
+    font-size:20px;
+    font-weight:700;
+    color:#000;
+    margin-bottom:4px
+  }
+  .print-subtitle{
+    font-size:12px;
+    color:#666
+  }
 }
 
 /* LOGIN */
@@ -1391,6 +1788,15 @@ button,.tab,.mini,.head-btn,.punch{
           ⎋
         </button>
 
+        <button
+          id="btnModoEscuro"
+          class="head-btn"
+          type="button"
+          title="Modo escuro"
+        >
+          🌙
+        </button>
+
       </div>
 
     </div>
@@ -1482,6 +1888,17 @@ button,.tab,.mini,.head-btn,.punch{
         <span class="icon">◀</span>
         <span class="label">Saída Tarde</span>
         <span class="hint">Fim do dia</span>
+      </button>
+
+      <button
+        class="punch"
+        data-type="QR"
+        type="button"
+        id="btnPunchQR"
+      >
+        <span class="icon">📷</span>
+        <span class="label">QR / NFC</span>
+        <span class="hint">Leitura rápida</span>
       </button>
 
     </section>
@@ -1758,6 +2175,106 @@ button,.tab,.mini,.head-btn,.punch{
 
 </section>
 
+<!-- =========================================================
+     BUSCA INTELIGENTE — RELATÓRIOS
+     ========================================================= -->
+
+<section id="searchCard" class="card">
+
+  <div class="panel-head">
+
+    <h2>
+      Pesquisa de Horários
+    </h2>
+
+    <div class="search-header">
+
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input
+          id="searchInput"
+          type="text"
+          placeholder="Ex: Pedro sábado, extra outubro, domingo, noite 20h, menos 1h dia, minutos 2025-03..."
+          autocomplete="off"
+        />
+      </div>
+
+      <div class="search-tags" id="searchTags"></div>
+    </div>
+
+    <div class="search-filters">
+      <div class="filter-group">
+        <label>Utilizador</label>
+        <select id="filterUser"></select>
+      </div>
+      <div class="filter-group">
+        <label>De</label>
+        <input id="filterDateFrom" type="date" />
+      </div>
+      <div class="filter-group">
+        <label>Até</label>
+        <input id="filterDateTo" type="date" />
+      </div>
+      <div class="filter-group">
+        <label>Tipo</label>
+        <select id="filterType">
+          <option value="">Todos</option>
+          <option value="normal">Horário normal</option>
+          <option value="extra">Horas extra</option>
+          <option value="sabado">Sábado</option>
+          <option value="domingo">Domingo</option>
+          <option value="noite">Noite (após 20h)</option>
+          <option value="curto">Dia curto (&lt; 1h)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="search-actions">
+      <button id="searchBtn" class="primary" type="button">Pesquisar</button>
+      <button id="clearSearchBtn" type="button">Limpar</button>
+    </div>
+
+    <div class="export-btn">
+      <button id="exportPdfBtn" type="button">
+        <span class="export-icon">📄</span>
+        Exportar PDF
+      </button>
+    </div>
+
+  </div>
+
+  <div class="panel-body search-results">
+
+    <div class="results-header">
+      <span class="results-count" id="searchCount">0 resultados</span>
+    </div>
+
+    <table class="results-table" id="searchTable">
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Dia</th>
+          <th>Utilizador</th>
+          <th>Entrada</th>
+          <th>Saída</th>
+          <th class="hour-cell">Trabalhado</th>
+          <th class="hour-cell">Normal</th>
+          <th class="hour-cell">Extra</th>
+          <th class="empty-cell">Tipo</th>
+        </tr>
+      </thead>
+      <tbody id="searchTableBody"></tbody>
+    </table>
+
+    <div class="empty-state" id="searchEmpty" style="display:none">
+      <div class="empty-icon">🔍</div>
+      <h3>Nenhum resultado encontrado</h3>
+      <p>Tente alterar os filtros ou a pesquisa.</p>
+    </div>
+
+  </div>
+
+</section>
 
 <div id="printArea"></div>
 
@@ -4567,6 +5084,545 @@ document.addEventListener(
     $('email').focus();
   }
 );
+
+/* =========================================================
+   BUSCA INTELIGENTE — RELATÓRIOS
+   ========================================================= */
+
+const Search = {
+  results: [],
+  filters: {}
+};
+
+function initSearch() {
+  const input = $('searchInput');
+  const btn = $('searchBtn');
+  const clearBtn = $('clearSearchBtn');
+  const exportBtn = $('exportPdfBtn');
+
+  if (!input || !btn) return;
+
+  input.addEventListener('keypress', function (e) {
+    if (e.key === 'Enter') performSearch();
+  });
+
+  btn.addEventListener('click', performSearch);
+  clearBtn.addEventListener('click', clearSearch);
+  exportBtn.addEventListener('click', exportSearchPdf);
+
+  loadUsersForFilter();
+
+  const today = new Date();
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+  $('filterDateFrom').value = firstDay.toISOString().split('T')[0];
+  $('filterDateTo').value = today.toISOString().split('T')[0];
+}
+
+function loadUsersForFilter() {
+  backend('listarUtilizadores', [], function (result) {
+    if (!result || !result.utilizadores) return;
+    const select = $('filterUser');
+    result.utilizadores.forEach(function (u) {
+      const opt = document.createElement('option');
+      opt.value = u.ID || u.id;
+      opt.textContent = u.Nome || u.nome || u.ID || u.id;
+      select.appendChild(opt);
+    });
+  }, function () {});
+}
+
+function clearSearch() {
+  $('searchInput').value = '';
+  $('searchTags').innerHTML = '';
+  $('filterUser').value = '';
+  $('filterDateFrom').value = '';
+  $('filterDateTo').value = '';
+  $('filterType').value = '';
+  Search.results = [];
+  renderSearchResults();
+}
+
+function performSearch() {
+  if (S.busy) return;
+  S.busy = true;
+  load('A pesquisar...');
+
+  const query = $('searchInput').value.trim().toLowerCase();
+  const dateFrom = $('filterDateFrom').value;
+  const dateTo = $('filterDateTo').value;
+  const userId = $('filterUser').value;
+  const type = $('filterType').value;
+
+  Search.filters = { query, dateFrom, dateTo, userId, type };
+
+  backend('consultarRelatorioPicagens', [
+    S.token,
+    dateFrom,
+    dateTo,
+    userId || null
+  ], function (result) {
+    S.busy = false;
+    unload();
+
+    if (!result || !result.picagens) {
+      Search.results = [];
+      renderSearchResults();
+      toast('Erro ao carregar dados.', 'err');
+      return;
+    }
+
+    let filtered = result.picagens;
+
+    if (query) {
+      filtered = filtered.filter(function (p) {
+        const texto = (p.nome || '').toLowerCase() + ' ' +
+                      (p.data || '').toLowerCase() + ' ' +
+                      (p.tipo || '').toLowerCase();
+        return texto.includes(query);
+      });
+    }
+
+    if (type) {
+      filtered = filtered.filter(function (p) {
+        return classificarTipoDia(p) === type;
+      });
+    }
+
+    Search.results = filtered;
+    renderSearchResults();
+  }, function (erro) {
+    S.busy = false;
+    unload();
+    serverError(erro, 'consultarRelatorioPicagens');
+  });
+}
+
+function classificarTipoDia(p) {
+  const data = new Date(p.data);
+  const diaSemana = data.getDay();
+  const hora = data.getHours();
+
+  if (diaSemana === 0) return 'domingo';
+  if (diaSemana === 6) return 'sabado';
+  if (hora >= 20) return 'noite';
+
+  const minutos = p.minutosTrabalhados || 0;
+  if (minutos > 0 && minutos < 60) return 'curto';
+  if (minutos > 450) return 'extra';
+
+  return 'normal';
+}
+
+function renderSearchResults() {
+  const tbody = $('searchTableBody');
+  const count = $('searchCount');
+  const empty = $('searchEmpty');
+  const table = $('searchTable');
+
+  tbody.innerHTML = '';
+
+  if (Search.results.length === 0) {
+    count.textContent = '0 resultados';
+    table.style.display = 'none';
+    empty.style.display = 'block';
+    return;
+  }
+
+  count.textContent = Search.results.length + ' resultado' +
+    (Search.results.length !== 1 ? 's' : '');
+  table.style.display = 'table';
+  empty.style.display = 'none';
+
+  Search.results.forEach(function (p) {
+    const tr = document.createElement('tr');
+
+    const tipoDia = classificarTipoDia(p);
+    const tipoClass = tipoDia === 'extra' ? 'extra-cell' :
+                      tipoDia === 'normal' ? 'normal-cell' : '';
+
+    tr.innerHTML =
+      '<td>' + esc(formatarData(p.data)) + '</td>' +
+      '<td>' + esc(diaSemanaNome(p.data)) + '</td>' +
+      '<td>' + esc(p.nome || p.Nome || '') + '</td>' +
+      '<td>' + esc(p.entrada || '-') + '</td>' +
+      '<td>' + esc(p.saida || '-') + '</td>' +
+      '<td class="hour-cell">' + esc(minutosParaHHMM(p.minutosTrabalhados || 0)) + '</td>' +
+      '<td class="hour-cell ' + tipoClass + '">' + esc(minutosParaHHMM(p.minutosNormais || 0)) + '</td>' +
+      '<td class="hour-cell ' + tipoClass + '">' + esc(minutosParaHHMM(p.minutosExtra || 0)) + '</td>' +
+      '<td class="empty-cell">' + esc(tipoDia) + '</td>';
+
+    tbody.appendChild(tr);
+  });
+}
+
+function formatarData(valor) {
+  if (!valor) return '-';
+  const d = new Date(valor);
+  if (Number.isNaN(d.getTime())) return String(valor);
+  return d.toLocaleDateString('pt-PT');
+}
+
+function diaSemanaNome(valor) {
+  if (!valor) return '-';
+  const d = new Date(valor);
+  if (Number.isNaN(d.getTime())) return String(valor);
+  return d.toLocaleDateString('pt-PT', { weekday: 'short' });
+}
+
+function minutosParaHHMM(minutos) {
+  if (!minutos) return '0:00';
+  const h = Math.floor(minutos / 60);
+  const m = minutos % 60;
+  return h + ':' + String(m).padStart(2, '0');
+}
+
+function exportSearchPdf() {
+  if (Search.results.length === 0) {
+    toast('Não há resultados para exportar.', 'warn');
+    return;
+  }
+
+  S.busy = true;
+  load('A gerar PDF...');
+
+  const printContent = buildPrintHTML();
+
+  const printWindow = window.open('', '_blank');
+  printWindow.document.write('<html><head><title>Relatório de Horários</title>');
+  printWindow.document.write('<style>');
+  printWindow.document.write('@page { size: A4; margin: 15mm; }');
+  printWindow.document.write('body { font-family: Arial, sans-serif; font-size: 11px; color: #000; }');
+  printWindow.document.write('.print-header { text-align: center; margin-bottom: 20px; }');
+  printWindow.document.write('.print-title { font-size: 18px; font-weight: bold; margin-bottom: 4px; }');
+  printWindow.document.write('.print-subtitle { font-size: 11px; color: #666; margin-bottom: 15px; }');
+  printWindow.document.write('.print-table { width: 100%; border-collapse: collapse; }');
+  printWindow.document.write('.print-table th, .print-table td { border: 1px solid #000; padding: 5px 8px; font-size: 10px; text-align: left; }');
+  printWindow.document.write('.print-table th { background: #e9f4f8; font-weight: bold; text-transform: uppercase; font-size: 9px; letter-spacing: 0.05em; }');
+  printWindow.document.write('.print-table tr:nth-child(even) { background: #f4f7f9; }');
+  printWindow.document.write('.no-print { display: none; }');
+  printWindow.document.write('</style></head><body>');
+  printWindow.document.write(printContent);
+  printWindow.document.write('<script>window.print(); window.close();</script>');
+  printWindow.document.close();
+
+  S.busy = false;
+  unload();
+  toast('PDF gerado com sucesso.', 'ok');
+}
+
+function buildPrintHTML() {
+  const from = $('filterDateFrom').value || '—';
+  const to = $('filterDateTo').value || '—';
+  const user = $('filterUser').options[$('filterUser').selectedIndex]?.text || 'Todos';
+  const type = $('filterType').options[$('filterType').selectedIndex]?.text || 'Todos';
+
+  let html =
+    '<div class="print-header">' +
+    '<div class="print-title">Relatório de Horários</div>' +
+    '<div class="print-subtitle">Período: ' + esc(from) + ' a ' + esc(to) +
+    ' | Utilizador: ' + esc(user) + ' | Tipo: ' + esc(type) +
+    ' | Gerado em: ' + new Date().toLocaleString('pt-PT') + '</div>' +
+    '</div>' +
+    '<table class="print-table"><thead><tr>' +
+    '<th>Data</th><th>Dia</th><th>Utilizador</th><th>Entrada</th><th>Saída</th>' +
+    '<th>Trabalhado</th><th>Normal</th><th>Extra</th><th>Tipo</th>' +
+    '</tr></thead><tbody>';
+
+  Search.results.forEach(function (p) {
+    html += '<tr>' +
+      '<td>' + esc(formatarData(p.data)) + '</td>' +
+      '<td>' + esc(diaSemanaNome(p.data)) + '</td>' +
+      '<td>' + esc(p.nome || p.Nome || '') + '</td>' +
+      '<td>' + esc(p.entrada || '-') + '</td>' +
+      '<td>' + esc(p.saida || '-') + '</td>' +
+      '<td>' + esc(minutosParaHHMM(p.minutosTrabalhados || 0)) + '</td>' +
+      '<td>' + esc(minutosParaHHMM(p.minutosNormais || 0)) + '</td>' +
+      '<td>' + esc(minutosParaHHMM(p.minutosExtra || 0)) + '</td>' +
+      '<td>' + esc(classificarTipoDia(p)) + '</td>' +
+      '</tr>';
+  });
+
+  const totalTrab = Search.results.reduce((s, p) => s + (p.minutosTrabalhados || 0), 0);
+  const totalNorm = Search.results.reduce((s, p) => s + (p.minutosNormais || 0), 0);
+  const totalExtra = Search.results.reduce((s, p) => s + (p.minutosExtra || 0), 0);
+
+  html += '<tr style="font-weight:bold; background:#e9f4f8;">' +
+    '<td colspan="3">TOTAIS</td>' +
+    '<td></td><td></td>' +
+    '<td>' + minutosParaHHMM(totalTrab) + '</td>' +
+    '<td>' + minutosParaHHMM(totalNorm) + '</td>' +
+    '<td>' + minutosParaHHMM(totalExtra) + '</td>' +
+    '<td></td>' +
+    '</tr>';
+
+  html += '</tbody></table></body></html>';
+
+  return html;
+}
+
+/* ============================================================
+   QR / NFC — Modal de leitura rápida
+   ============================================================ */
+const modalQR = document.createElement('div');
+modalQR.id = 'modalQR';
+modalQR.className = 'hidden';
+modalQR.innerHTML = [
+  '<div class="modal-backdrop" id="modalQRBackdrop"></div>',
+  '<div class="modal-card" id="modalQRCard">',
+  '  <div class="modal-head">',
+  '    <h3>Leitura QR / NFC</h3>',
+  '    <button id="btnFecharQR" class="modal-close" type="button">✕</button>',
+  '  </div>',
+  '  <div class="modal-body">',
+  '    <div class="qr-instructions">',
+  '      <p>Aproxime o cartão NFC ou aponte a câmara para o código QR.</p>',
+  '      <p>Ou cole o código de identificação abaixo:</p>',
+  '    </div>',
+  '    <div class="qr-camera" id="qrCamera"></div>',
+  '    <div class="qr-input-group">',
+  '      <input id="qrInput" type="text" placeholder="Código do utilizador ou cartão" autocomplete="off">',
+  '      <button id="btnLerQR" type="button">Ler</button>',
+  '    </div>',
+  '    <div class="qr-status" id="qrStatus"></div>',
+  '  </div>',
+  '</div>'
+].join('');
+
+document.body.appendChild(modalQR);
+
+const btnPunchQR = $('btnPunchQR');
+const btnFecharQR = $('btnFecharQR');
+const btnLerQR = $('btnLerQR');
+const qrInput = $('qrInput');
+const qrStatus = $('qrStatus');
+const modalQRBackdrop = $('modalQRBackdrop');
+
+function abrirQR() { modalQR.classList.remove('hidden'); modalQRBackdrop.classList.remove('hidden'); qrInput.focus(); }
+function fecharQR() { modalQR.classList.add('hidden'); modalQRBackdrop.classList.add('hidden'); qrStatus.textContent = ''; qrInput.value = ''; }
+
+if (btnPunchQR) btnPunchQR.addEventListener('click', abrirQR);
+if (btnFecharQR) btnFecharQR.addEventListener('click', fecharQR);
+if (modalQRBackdrop) modalQRBackdrop.addEventListener('click', fecharQR);
+
+if (btnLerQR) {
+  btnLerQR.addEventListener('click', function () {
+    const codigo = String(qrInput.value || '').trim();
+    if (!codigo) { qrStatus.textContent = 'Insira um código.'; return; }
+    qrStatus.textContent = 'A processar...';
+    /* O código QR contém o ID do utilizador. Usamos autenticação atual e registamos picagem de entrada. */
+    backend('autenticarUtilizador', [codigo, ''], function (resultado) {
+      if (!resultado || !resultado.token) {
+        qrStatus.textContent = 'Código não reconhecido.';
+        return;
+      }
+      backend('registarPicagem', [resultado.token, 'ENTRADA_MANHA', { origem: 'QR' }], function (res) {
+        if (res && res.sucesso) {
+          qrStatus.textContent = 'Picagem registada com sucesso.';
+          setTimeout(fecharQR, 800);
+          carregarDados();
+        } else {
+          qrStatus.textContent = res && res.erro ? res.erro : 'Erro ao registar picagem.';
+        }
+      }, function () { qrStatus.textContent = 'Erro de ligação.'; });
+    }, function () { qrStatus.textContent = 'Erro de autenticação.'; });
+  });
+}
+
+/* ============================================================
+   MODO ESCURO — alternância com persistência
+   ============================================================ */
+(function () {
+  const btn = $('btnModoEscuro');
+  if (!btn) return;
+  const escuro = localStorage.getItem('pica_modo_escuro') === '1';
+  if (escuro) document.body.classList.add('dark');
+  btn.textContent = escuro ? '☀️' : '🌙';
+  btn.addEventListener('click', function () {
+    const ativo = document.body.classList.toggle('dark');
+    localStorage.setItem('pica_modo_escuro', ativo ? '1' : '0');
+    btn.textContent = ativo ? '☀️' : '🌙';
+  });
+})();
+
+/* ============================================================
+   ASSINATURA DIGITAL — Modal e canvas
+   ============================================================ */
+const modalAssinatura = document.createElement('div');
+modalAssinatura.id = 'modalAssinatura';
+modalAssinatura.className = 'hidden';
+modalAssinatura.innerHTML = [
+  '<div class="modal-backdrop" id="modalAssinaturaBackdrop"></div>',
+  '<div class="modal-card" id="modalAssinaturaCard">',
+  '  <div class="modal-head">',
+  '    <h3>Assinar Relatório Mensal</h3>',
+  '    <button id="btnFecharAssinatura" class="modal-close" type="button">✕</button>',
+  '  </div>',
+  '  <div class="modal-body">',
+  '    <p id="assinaturaInfo">Mês: <span id="assinaturaMes"></span></p>',
+  '    <div class="canvas-border" id="canvasBorder">',
+  '      <canvas id="canvasAssinatura" width="400" height="150"></canvas>',
+  '    </div>',
+  '    <div id="assinaturaStatus" style="margin-top:8px;font-size:13px;color:var(--mut);"></div>',
+  '    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">',
+  '      <button id="btnLimparAssinatura" type="button">Limpar</button>',
+  '      <button id="btnConfirmarAssinatura" type="button" disabled>Confirmar Assinatura</button>',
+  '    </div>',
+  '  </div>',
+  '</div>'
+].join('');
+
+document.body.appendChild(modalAssinatura);
+
+const btnFecharAssinatura = $('btnFecharAssinatura');
+const modalAssinaturaBackdrop = $('modalAssinaturaBackdrop');
+const canvas = $('canvasAssinatura');
+const ctx = canvas ? canvas.getContext('2d') : null;
+const btnLimpar = $('btnLimparAssinatura');
+const btnConfirmar = $('btnConfirmarAssinatura');
+const assinaturaStatus = $('assinaturaStatus');
+let assinaturaMesAtual = '';
+let assinaturaTipoAtual = '';
+let assinaturaDesenhando = false;
+
+function abrirAssinatura(mes, tipo) {
+  assinaturaMesAtual = mes;
+  assinaturaTipoAtual = tipo;
+  $('assinaturaMes').textContent = mes;
+  assinaturaStatus.textContent = '';
+  if (ctx) { ctx.clearRect(0, 0, canvas.width, canvas.height); }
+  if (btnConfirmar) btnConfirmar.disabled = true;
+  modalAssinatura.classList.remove('hidden');
+  modalAssinaturaBackdrop.classList.remove('hidden');
+}
+function fecharAssinatura() {
+  modalAssinatura.classList.add('hidden');
+  modalAssinaturaBackdrop.classList.add('hidden');
+  assinaturaStatus.textContent = '';
+}
+
+if (btnFecharAssinatura) btnFecharAssinatura.addEventListener('click', fecharAssinatura);
+if (modalAssinaturaBackdrop) modalAssinaturaBackdrop.addEventListener('click', fecharAssinatura);
+
+if (canvas && ctx) {
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#000';
+
+  function iniciarDesenho(e) {
+    assinaturaDesenhando = true;
+    const pos = obterPosicaoCanvas(e);
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+  }
+  function desenhar(e) {
+    if (!assinaturaDesenhando) return;
+    const pos = obterPosicaoCanvas(e);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+    if (btnConfirmar) btnConfirmar.disabled = false;
+    assinaturaStatus.textContent = '';
+  }
+  function pararDesenho() { assinaturaDesenhando = false; }
+
+  canvas.addEventListener('mousedown', iniciarDesenho);
+  canvas.addEventListener('mousemove', desenhar);
+  canvas.addEventListener('mouseup', pararDesenho);
+  canvas.addEventListener('mouseout', pararDesenho);
+  canvas.addEventListener('touchstart', function (e) { e.preventDefault(); iniciarDesenho(e.touches[0]); }, { passive: false });
+  canvas.addEventListener('touchmove', function (e) { e.preventDefault(); desenhar(e.touches[0]); }, { passive: false });
+  canvas.addEventListener('touchend', function (e) { e.preventDefault(); pararDesenho(); }, { passive: false });
+}
+
+function obterPosicaoCanvas(e) {
+  const rect = canvas.getBoundingClientRect();
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+}
+
+if (btnLimpar) {
+  btnLimpar.addEventListener('click', function () {
+    if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (btnConfirmar) btnConfirmar.disabled = true;
+    assinaturaStatus.textContent = '';
+  });
+}
+
+if (btnConfirmar) {
+  btnConfirmar.addEventListener('click', function () {
+    const dataUrl = canvas ? canvas.toDataURL() : '';
+    if (!dataUrl) { assinaturaStatus.textContent = 'Desenhe a assinatura primeiro.'; return; }
+    btnConfirmar.disabled = true;
+    assinaturaStatus.textContent = 'A gravar...';
+    backend('registarAssinaturaMes', [null, assinaturaMesAtual, assinaturaTipoAtual, dataUrl], function (res) {
+      if (res && res.sucesso) {
+        assinaturaStatus.textContent = 'Assinatura gravada com sucesso.';
+        setTimeout(fecharAssinatura, 800);
+      } else {
+        assinaturaStatus.textContent = res && res.erro ? res.erro : 'Erro ao gravar.';
+        btnConfirmar.disabled = false;
+      }
+    }, function () {
+      assinaturaStatus.textContent = 'Erro de ligação.';
+      btnConfirmar.disabled = false;
+    });
+  });
+}
+
+/* ============================================================
+   VISUAL VIEWPORT — Teclado virtual iOS/Android
+   ============================================================ */
+(function () {
+  if (!window.visualViewport) return;
+  const vp = window.visualViewport;
+  const root = document.documentElement;
+  function ajustar() {
+    root.style.setProperty('--keyboard-height', vp.height + 'px');
+  }
+  vp.addEventListener('resize', ajustar);
+  vp.addEventListener('scroll', ajustar);
+  ajustar();
+})();
+
+const _origBindPanel = bindPanel;
+function bindPanel() {
+  _origBindPanel();
+  initSearch();
+}
+
+/* ============================================================
+   PWA — Service Worker registo
+   ============================================================ */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js')
+    .then(function (registration) {
+      console.log('SW registado: ' + registration.scope);
+    })
+    .catch(function (erro) {
+      console.log('Erro ao registar SW: ' + erro);
+    });
+}
+
+/* Detetar instalação PWA */
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', function (e) {
+  e.preventDefault();
+  deferredPrompt = e;
+  mostrarBotaoInstalarPWA();
+});
+
+function mostrarBotaoInstalarPWA() {
+  const btn = document.createElement('button');
+  btn.id = 'btnInstalarPWA';
+  btn.type = 'button';
+  btn.textContent = 'Instalar Aplicação';
+  btn.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:1000;padding:12px 16px;background:var(--p);color:#fff;border:none;border-radius:var(--r);font-size:14px;cursor:pointer;box-shadow:var(--shadow);';
+  btn.addEventListener('click', function () {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then(function () { deferredPrompt = null; btn.remove(); });
+    }
+  });
+  document.body.appendChild(btn);
+}
 </script>
 
 </body>

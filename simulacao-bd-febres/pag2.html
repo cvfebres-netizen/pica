@@ -1,0 +1,26 @@
+<!doctype html><html lang="pt"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BD Febres — busca e historico</title>
+<style>
+body{font-family:system-ui,Arial,sans-serif;max-width:1100px;margin:24px auto;padding:0 16px;color:#222}
+input,select,button{font-size:15px;padding:8px;margin:4px}
+button{cursor:pointer;background:#0b6e4f;color:#fff;border:0;border-radius:6px;padding:8px 14px}
+button.sec{background:#eee;color:#222}
+.card{border:1px solid #ddd;border-radius:8px;padding:12px;margin:8px 0}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{border:1px solid #ddd;padding:6px 8px;text-align:left;vertical-align:top}
+th{background:#0b6e4f;color:#fff;position:sticky;top:0}
+tr:nth-child(even){background:#f7faf8}
+.tag{display:inline-block;background:#e6f2ec;border-radius:10px;padding:1px 8px;font-size:12px;margin-right:4px}
+.mut{color:#666;font-size:13px}
+#busca{width:70%}
+</style></head><body>
+<h1>BD Febres — busca e historico</h1>
+<p id="st" class="mut">A carregar a base de dados…</p>
+<div class="card"><b>Busca inteligente</b> <span class="mut">qualquer pista: nome, parte do nome por qualquer ordem, telefone, telemovel, NIF, microchip, n. de tutor/animal (ex: <i>8</i>), data (ex: <i>2024-05</i>)</span><br>
+<input id="busca" placeholder="ex: silva costa · 932290927 · 620098100757015 · 545" onkeydown="if(event.key==='Enter')irBusca()">
+<button onclick="irBusca()">Buscar</button>
+<button class="sec" onclick="irHist()">Ver historico geral</button></div>
+<div id="saida"><p class="mut">Escreve uma pista e prime Buscar, ou abre o historico geral.</p></div>
+<script src="app.js"></script>
+</body></html>

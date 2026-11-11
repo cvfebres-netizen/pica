@@ -135,7 +135,8 @@ const SHEETS = {
   RESUMO_MENSAL: 'RESUMO_MENSAL',
   BACKUPS: 'BACKUPS',
   TESTES: 'TESTES',
-  LOG_ERROS: 'LOG_ERROS'
+  LOG_ERROS: 'LOG_ERROS',
+  ASSINATURAS: 'ASSINATURAS'
 };
 
 const ENUMS = {
@@ -208,14 +209,14 @@ const ROTACAO_SABADOS_INICIAL = [
     // '' = automático: o setupSistema() preenche o próximo sábado
     // (proximoSabadoIso_). Sem dataInicio a rotação fica inativa e
     // todas as horas de sábado contam como extra em vez de normais.
-    dataInicio: '',
+    dataInicio: '2026-09-05',
     ativo: true
   },
   {
     grupoId: 'GRUPO_ENFERMAGEM',
     descricao: 'Enfermagem/Gestão',
     ordem: ['USR_HUGO_SILVA', 'USR_RITA_REIS'],
-    dataInicio: '',
+    dataInicio: '2026-09-05',
     ativo: true
   }
 ];
@@ -239,6 +240,7 @@ const HEADERS = {
   RESUMO_MENSAL: ['Mes', 'UserID', 'Nome', 'MinutosPlaneados', 'MinutosTrabalhados', 'MinutosNormais', 'MinutosExtra', 'MinutosExtraAprovados', 'Sabados', 'Domingos', 'Feriados', 'Ausencias', 'Excecoes', 'AtualizadoEm'],
   BACKUPS: ['ID', 'DataHora', 'Tipo', 'Descricao', 'CriadoPor', 'Estado', 'Dados'],
   TESTES: ['ID', 'DataHora', 'Teste', 'Resultado', 'Esperado', 'Observacoes'],
-  LOG_ERROS: ['ID', 'DataHora', 'Funcao', 'Mensagem', 'Stack', 'UserID', 'Dados']
+  LOG_ERROS: ['ID', 'DataHora', 'Funcao', 'Mensagem', 'Stack', 'UserID', 'Dados'],
+  ASSINATURAS: ['ID', 'Data', 'Mes', 'UserID', 'Nome', 'Tipo', 'Assinatura', 'Estado', 'CriadoEm', 'AtualizadoEm']
 };
 

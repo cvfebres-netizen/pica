@@ -1,0 +1,2782 @@
+[
+ {
+  "tab": "advances",
+  "ncols": 11,
+  "cols": [
+   "advance_id",
+   "advance_user_id",
+   "advance_client_id",
+   "advance_cash_register_id",
+   "advance_return_cash_register_id",
+   "advance_client_document_id",
+   "advance_observations",
+   "advance_value",
+   "advance_value_used",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "advance_user_id->users.id",
+   "advance_client_id->clients.client_id",
+   "advance_cash_register_id->cash_register.cash_register_id",
+   "advance_client_document_id->client_document.client_document_id",
+   "advance_client_document_id->client_document.client_document_id"
+  ]
+ },
+ {
+  "tab": "alert_tasks",
+  "ncols": 10,
+  "cols": [
+   "alert_task_id",
+   "message",
+   "receiver",
+   "task_seen",
+   "created_by",
+   "alert_task_animal_id",
+   "deleted_receiver",
+   "deleted_created_by",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "alert_task_animal_id->animals.animal_id",
+   "created_by->users.id"
+  ]
+ },
+ {
+  "tab": "analysis_reference_values",
+  "ncols": 13,
+  "cols": [
+   "reference_value_id",
+   "reference_value_exam_name",
+   "reference_value_parameter_name",
+   "reference_value_integ_homolog",
+   "reference_value_parameter_description",
+   "reference_value_parameter_order",
+   "reference_value_parameter_state",
+   "reference_value_parameter_value",
+   "reference_value_ref_unit",
+   "reference_value_animal_species_id",
+   "reference_value_subclinic_id",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "reference_value_subclinic_id->subclinics.subclinic_id"
+  ]
+ },
+ {
+  "tab": "animal_exams",
+  "ncols": 18,
+  "cols": [
+   "animal_exam_id",
+   "animal_exam_product_info_id",
+   "animal_exam_biochemistry_id",
+   "animal_exam_hemogram_id",
+   "animal_exam_coagulation_id",
+   "animal_exam_pcr_analysis_id",
+   "animal_exam_urine_analysis_id",
+   "animal_exam_hormone_id",
+   "animal_exam_subfamily_id",
+   "animal_exam_obs",
+   "animal_exam_integ_data",
+   "animal_exam_data",
+   "animal_exam_animal_id",
+   "animal_exam_doc",
+   "animal_exam_state",
+   "animal_exam_updated_by",
+   "animal_exam_created_by",
+   "animal_exam_created_at"
+  ],
+  "fks": [
+   "animal_exam_product_info_id->products_info.product_info_id",
+   "animal_exam_updated_by->users.id",
+   "animal_exam_subfamily_id->products_info_subfamilies.product_info_subfamily_id",
+   "animal_exam_animal_id->animals.animal_id",
+   "animal_exam_created_by->users.id",
+   "animal_exam_hemogram_id->appointment_hemogram.appointment_hemogram_id",
+   "animal_exam_biochemistry_id->appointment_biochemistry.appointment_biochemistry_id",
+   "animal_exam_coagulation_id->appointment_coagulation.appointment_coagulation_id",
+   "animal_exam_pcr_analysis_id->appointment_pcr_analysis.appointment_pcr_analysis_id",
+   "animal_exam_urine_analysis_id->appointment_urine_analysis.appointment_urine_analysis_id",
+   "animal_exam_hormone_id->appointment_hormone.appointment_hormone_id"
+  ]
+ },
+ {
+  "tab": "animals",
+  "ncols": 46,
+  "cols": [
+   "animal_id",
+   "animal_reference",
+   "animal_client_id",
+   "animal_name",
+   "animal_birth_date",
+   "animal_death_day",
+   "animal_weight",
+   "animal_sex",
+   "animal_state",
+   "animal_adoption_date",
+   "animal_breed_id",
+   "animal_microchip",
+   "animal_buletin",
+   "animal_passport",
+   "animal_sterilized",
+   "animal_sterilized_date",
+   "animal_size",
+   "animal_color",
+   "animal_internal_health_insurance",
+   "animal_internal_health_insurance_starting_date",
+   "animal_internal_health_insurance_ending_date",
+   "animal_descProd",
+   "animal_descServ",
+   "animal_descProdComp",
+   "animal_fur",
+   "animal_tail",
+   "animal_health_insurance",
+   "animal_allergies",
+   "animal_personality",
+   "animal_observations",
+   "animal_doctor_pref",
+   "animal_inactive_reason",
+   "animal_pic",
+   "animal_alim1",
+   "animal_alim2",
+   "animal_alim3",
+   "animal_fiv",
+   "animal_felv",
+   "animal_dirofilaria",
+   "animal_leishmaniose",
+   "animal_is_donor",
+   "animal_quantity",
+   "animal_intervencao",
+   "animal_created_by",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "animal_client_id->clients.client_id",
+   "animal_health_insurance->health_insurances.health_insurance_id",
+   "animal_created_by->users.id",
+   "animal_internal_health_insurance->internal_health_insurance.internal_health_insurance_id"
+  ]
+ },
+ {
+  "tab": "animals_path",
+  "ncols": 16,
+  "cols": [
+   "animals_path_id",
+   "animals_path_animal_id",
+   "animals_path_animal_reference",
+   "animals_path_user_id",
+   "animals_path_origin",
+   "animals_path_origin_freguesia",
+   "animals_path_destination",
+   "animals_path_destination_other",
+   "animals_path_old_client_id",
+   "animals_path_new_client_id",
+   "animals_path_observations",
+   "animals_path_state",
+   "animals_path_date",
+   "animals_path_created_by",
+   "animals_path_created_at",
+   "animals_path_updated_at"
+  ],
+  "fks": [
+   "animals_path_animal_id->animals.animal_id",
+   "animals_path_created_by->users.id",
+   "animals_path_new_client_id->clients.client_id",
+   "animals_path_old_client_id->clients.client_id",
+   "animals_path_user_id->users.id"
+  ]
+ },
+ {
+  "tab": "appointment_biochemistry",
+  "ncols": 37,
+  "cols": [
+   "appointment_biochemistry_id",
+   "Albumina",
+   "Globulinas",
+   "ALT",
+   "AST",
+   "Ureia",
+   "BUN",
+   "Creatinina_Cinase",
+   "Creatinina",
+   "Glucose",
+   "Proteinas_Totais",
+   "Colesterol",
+   "HDL",
+   "LDL",
+   "Triglicerideos",
+   "Acido_Urico",
+   "Fosforo",
+   "Calcio",
+   "Bilirrubina_Total",
+   "Cloro",
+   "Fosfatase_Alcalina",
+   "Gamma_GT",
+   "Ferro",
+   "Magnesio",
+   "LDH",
+   "Potassio",
+   "Sodio",
+   "Lipase",
+   "bio1",
+   "bio2",
+   "bio3",
+   "bio4",
+   "bio5",
+   "Na_K",
+   "bio_obs",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "appointment_coagulation",
+  "ncols": 12,
+  "cols": [
+   "appointment_coagulation_id",
+   "PT",
+   "TT",
+   "TTPA",
+   "coag1",
+   "coag2",
+   "coag3",
+   "coag4",
+   "coag5",
+   "coagulation_obs",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "appointment_complementar_exams",
+  "ncols": 19,
+  "cols": [
+   "appointment_complementar_exam_id",
+   "appointment_id",
+   "appointment_biochemistry_id",
+   "appointment_hemogram_id",
+   "appointment_coagulation_id",
+   "appointment_pcr_analysis_id",
+   "appointment_urine_analysis_id",
+   "appointment_hormone_id",
+   "appointment_complementar_exam_product_id",
+   "appointment_complementar_exam_subfamily_id",
+   "appointment_complementar_exam_obs",
+   "appointment_complementar_exam_doc",
+   "appointment_complementar_state",
+   "appointment_complementar_exam_date",
+   "appointment_complementar_exam_updated_by",
+   "created_by",
+   "created_at",
+   "opened_at",
+   "opened_by"
+  ],
+  "fks": [
+   "created_by->users.id",
+   "appointment_complementar_exam_updated_by->users.id",
+   "appointment_complementar_exam_subfamily_id->products_info_subfamilies.product_info_subfamily_id",
+   "opened_by->users.id",
+   "appointment_complementar_exam_product_id->products_info.product_info_id",
+   "appointment_hemogram_id->appointment_hemogram.appointment_hemogram_id",
+   "appointment_biochemistry_id->appointment_biochemistry.appointment_biochemistry_id",
+   "appointment_coagulation_id->appointment_coagulation.appointment_coagulation_id",
+   "appointment_pcr_analysis_id->appointment_pcr_analysis.appointment_pcr_analysis_id",
+   "appointment_urine_analysis_id->appointment_urine_analysis.appointment_urine_analysis_id",
+   "appointment_id->appointments.appointment_id",
+   "appointment_hormone_id->appointment_hormone.appointment_hormone_id"
+  ]
+ },
+ {
+  "tab": "appointment_hemogram",
+  "ncols": 39,
+  "cols": [
+   "appointment_hemogram_id",
+   "Eritrocitos",
+   "Hemoglobina",
+   "Hematocrito",
+   "HCM",
+   "CHCM",
+   "VCM",
+   "RDW",
+   "Plaquetas",
+   "Leucocitos",
+   "Neutrofilos_perc",
+   "Linfocitos_perc",
+   "Monocitos_perc",
+   "Eosinofilos_perc",
+   "Basofilos_perc",
+   "Linfocitos",
+   "Monocitos",
+   "Eosinofilos",
+   "Basofilos",
+   "Reticulocitos",
+   "Neutrofilos",
+   "Granulocitos",
+   "Granulocitos_perc",
+   "LinfocitosMonocitos",
+   "LinfocitosMonocitos_perc",
+   "MPV",
+   "PDW",
+   "PCT",
+   "RDW_CV",
+   "RDW_SD",
+   "ProgesteronaParto",
+   "hemo1",
+   "hemo2",
+   "hemo3",
+   "hemo4",
+   "hemo5",
+   "hemo_obs",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "appointment_hormone",
+  "ncols": 14,
+  "cols": [
+   "appointment_hormone_id",
+   "T4",
+   "Cortisol",
+   "Acs_Biliares",
+   "TSH",
+   "Progesterona",
+   "horm1",
+   "horm2",
+   "horm3",
+   "horm4",
+   "horm5",
+   "hormone_obs",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "appointment_pcr_analysis",
+  "ncols": 17,
+  "cols": [
+   "appointment_pcr_analysis_id",
+   "Babesia",
+   "Calicivirus_Felino",
+   "Coronavirus",
+   "Ehrlichia",
+   "Esgana",
+   "Hemabartolnella",
+   "Herpes_Virus",
+   "Leishmania",
+   "pcr1",
+   "pcr2",
+   "pcr3",
+   "pcr4",
+   "pcr5",
+   "pcr_analysis_obs",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "appointment_physical_exams",
+  "ncols": 26,
+  "cols": [
+   "appointment_physical_exam_id",
+   "appointment_id",
+   "appointment_body_condition",
+   "appointment_attitude",
+   "appointment_TRC",
+   "appointment_heart_rate",
+   "appointment_respiratory_frequency",
+   "appointment_blood_pressure",
+   "appointment_hydratation",
+   "appointment_muscous_membrane",
+   "appointment_temperature",
+   "appointment_ganglia_parotideos",
+   "appointment_ganglia_retrofaringeos",
+   "appointment_ganglia_submandibular",
+   "appointment_ganglia_preescapular",
+   "appointment_ganglia_axilar",
+   "appointment_ganglia_mamarios",
+   "appointment_ganglia_inguinais",
+   "appointment_ganglia_popliteos",
+   "appointment_pele_e_anexos",
+   "appointment_aparelho_respiratorio",
+   "appointment_sistema_cardiovascular",
+   "appointment_palpacao_abdominal",
+   "appointment_physical_exam_obs",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "appointment_id->appointments.appointment_id"
+  ]
+ },
+ {
+  "tab": "appointment_pics_lesion",
+  "ncols": 5,
+  "cols": [
+   "appointment_pics_lesion_id",
+   "appointment_pics_lesion_appointment_id",
+   "appointment_pics_lesion_path",
+   "appointment_pics_lesion_created_at",
+   "appointment_pics_lesion_updated_at"
+  ],
+  "fks": [
+   "appointment_pics_lesion_appointment_id->appointments.appointment_id"
+  ]
+ },
+ {
+  "tab": "appointment_prescriptions",
+  "ncols": 7,
+  "cols": [
+   "id",
+   "appointment_prescription_appointment_id",
+   "appointment_prescription_product_info_id",
+   "appointment_prescription_quantity",
+   "appointment_prescription_frequency",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "appointment_prescription_product_info_id->products_info.product_info_id",
+   "appointment_prescription_appointment_id->appointments.appointment_id"
+  ]
+ },
+ {
+  "tab": "appointment_products",
+  "ncols": 14,
+  "cols": [
+   "id",
+   "appointment_products_appointment_id",
+   "appointment_products_product_info_id",
+   "appointment_products_product_composed_id",
+   "appointment_products_unit",
+   "appointment_products_quantity",
+   "appointment_product_client_pvp",
+   "appointment_pvp_with_iva",
+   "appointment_iva",
+   "appointment_products_discount_percentage",
+   "appointment_products_state",
+   "appointment_products_user_id",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "appointment_products_product_info_id->products_info.product_info_id",
+   "appointment_products_product_composed_id->products_composed.product_composed_id",
+   "appointment_iva->tax_vat.tax_id",
+   "appointment_products_user_id->users.id",
+   "appointment_products_appointment_id->appointments.appointment_id"
+  ]
+ },
+ {
+  "tab": "appointment_products_composed",
+  "ncols": 9,
+  "cols": [
+   "appointment_products_composed_id",
+   "appointment_products_id",
+   "component_id",
+   "component_pvp",
+   "component_iva",
+   "component_quantity",
+   "component_discount_percentage",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "appointment_products_id->appointment_products.id",
+   "component_iva->tax_vat.tax_id"
+  ]
+ },
+ {
+  "tab": "appointment_urine_analysis",
+  "ncols": 28,
+  "cols": [
+   "appointment_urine_analysis_id",
+   "Racio_Proteina_Creatinina",
+   "Hemoglobina",
+   "Leucocitos",
+   "Nitritos",
+   "Urobilinogenio",
+   "Proteina",
+   "pH",
+   "Sangue",
+   "Densidade",
+   "Bilirrubina",
+   "Corpos_Cetonicos",
+   "Glucose",
+   "Sedimento",
+   "Gram",
+   "Citologia",
+   "Creatinina",
+   "Albumina",
+   "Racio_Creatinina_Albumina",
+   "Aspecto_Macroscopico",
+   "urine1",
+   "urine2",
+   "urine3",
+   "urine4",
+   "urine5",
+   "urine_analysis_obs",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "appointments",
+  "ncols": 25,
+  "cols": [
+   "appointment_id",
+   "appointment_visit_id",
+   "appointment_doctor_id",
+   "appointment_type",
+   "appointment_anamnese",
+   "appointment_diagnosisClosed_id",
+   "appointment_diagnosisClosed_id2",
+   "appointment_diagnosis",
+   "weight",
+   "desp_int",
+   "desp_ext",
+   "lifestyle",
+   "alim1",
+   "alim2",
+   "alim3",
+   "esterilizado",
+   "microchip",
+   "checklist_array",
+   "appointment_duration",
+   "appointment_pic_nodules",
+   "appointment_treatment",
+   "appointment_budget_id",
+   "deleted",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "appointment_doctor_id->users.id",
+   "appointment_budget_id->invoices.invoice_id",
+   "appointment_visit_id->visits.visit_id"
+  ]
+ },
+ {
+  "tab": "appointments_canceled",
+  "ncols": 25,
+  "cols": [
+   "appointment_canceled_id",
+   "appointment_canceled_visit_id",
+   "appointment_canceled_doctor_id",
+   "appointment_canceled_type",
+   "appointment_canceled_anamnese",
+   "appointment_canceled_diagnosisClosed_id",
+   "appointment_canceled_diagnosisClosed_id2",
+   "appointment_canceled_diagnosis",
+   "weight",
+   "desp_int",
+   "desp_ext",
+   "lifestyle",
+   "alim1",
+   "alim2",
+   "alim3",
+   "esterilizado",
+   "microchip",
+   "checklist_array",
+   "appointment_canceled_duration",
+   "appointment_canceled_pic_nodules",
+   "appointment_canceled_treatment",
+   "appointment_canceled_budget_id",
+   "deleted",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "budget_types",
+  "ncols": 5,
+  "cols": [
+   "budget_id",
+   "budget_name",
+   "budget_observations",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "budget_types_products",
+  "ncols": 12,
+  "cols": [
+   "budget_line_id",
+   "budget_id",
+   "budget_product_info_id",
+   "budget_product_composed_id",
+   "budget_quantity",
+   "budget_pvp",
+   "budget_pvp_value",
+   "budget_iva",
+   "budget_discount_value",
+   "budget_total",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "budget_product_info_id->products_info.product_info_id",
+   "budget_product_composed_id->products_composed.product_composed_id",
+   "budget_iva->tax_vat.tax_id",
+   "budget_id->budget_types.budget_id"
+  ]
+ },
+ {
+  "tab": "budgets",
+  "ncols": 7,
+  "cols": [
+   "budget_id",
+   "budget_invoice_id",
+   "budget_client_id",
+   "state",
+   "budget_limit_date",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "budget_client_id->clients.client_id",
+   "budget_invoice_id->invoices.invoice_id"
+  ]
+ },
+ {
+  "tab": "card_discount_family",
+  "ncols": 9,
+  "cols": [
+   "card_discount_family_id",
+   "family_id",
+   "discount",
+   "discount_start",
+   "discount_end",
+   "discount_scheduled_end_time",
+   "state",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "family_id->products_info_families.product_info_family_id"
+  ]
+ },
+ {
+  "tab": "card_discount_products",
+  "ncols": 10,
+  "cols": [
+   "card_discount_product_id",
+   "product_id",
+   "product_composed_id",
+   "discount",
+   "discount_start",
+   "discount_end",
+   "discount_scheduled_end_time",
+   "state",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "product_composed_id->products_composed.product_composed_id",
+   "product_id->products_info.product_info_id"
+  ]
+ },
+ {
+  "tab": "card_discount_section",
+  "ncols": 9,
+  "cols": [
+   "card_discount_section_id",
+   "section_id",
+   "discount",
+   "discount_start",
+   "discount_end",
+   "discount_scheduled_end_time",
+   "state",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "section_id->products_info_sections.product_info_section_id"
+  ]
+ },
+ {
+  "tab": "card_discount_subfamily",
+  "ncols": 9,
+  "cols": [
+   "card_discount_subfamily_id",
+   "subfamily_id",
+   "discount",
+   "discount_start",
+   "discount_end",
+   "discount_scheduled_end_time",
+   "state",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "subfamily_id->products_info_subfamilies.product_info_subfamily_id"
+  ]
+ },
+ {
+  "tab": "cash_movements",
+  "ncols": 8,
+  "cols": [
+   "cash_movement_id",
+   "cash_movement_user_id",
+   "cash_movement_cash_register_id",
+   "cash_movement_cash_register_history_id",
+   "cash_movement_value",
+   "cash_movement_observations",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "cash_movement_cash_register_id->cash_register.cash_register_id",
+   "cash_movement_user_id->users.id"
+  ]
+ },
+ {
+  "tab": "cash_register",
+  "ncols": 7,
+  "cols": [
+   "cash_register_id",
+   "cash_register_name",
+   "cash_register_subclinic_id",
+   "cash_register_state",
+   "cash_register_created_by",
+   "cash_register_created_at",
+   "cash_register_updated_at"
+  ],
+  "fks": [
+   "cash_register_subclinic_id->subclinics.subclinic_id",
+   "cash_register_created_by->users.id"
+  ]
+ },
+ {
+  "tab": "cash_register_history",
+  "ncols": 24,
+  "cols": [
+   "cash_register_history_id",
+   "cash_register_history_state",
+   "cash_register_history_fund",
+   "cash_register_history_mb",
+   "cash_register_history_cash",
+   "cash_register_history_cash_input",
+   "cash_register_history_cash_output",
+   "cash_register_history_transfer",
+   "cash_register_history_check",
+   "cash_register_history_mbway",
+   "cash_register_history_expenses",
+   "cash_register_history_deposit",
+   "cash_register_history_automatic_deposit",
+   "cash_register_history_value",
+   "cash_register_history_observations",
+   "cash_register_history_credit_note",
+   "cash_register_history_opened_by",
+   "cash_register_history_closed_by",
+   "cash_register_history_opened_at",
+   "cash_register_history_closed_at",
+   "cash_register_history_subclinic_id",
+   "cash_register_history_cash_register_id",
+   "cash_register_history_created_at",
+   "cash_register_history_updated_at"
+  ],
+  "fks": [
+   "cash_register_history_subclinic_id->subclinics.subclinic_id",
+   "cash_register_history_cash_register_id->cash_register.cash_register_id",
+   "cash_register_history_opened_by->users.id",
+   "cash_register_history_closed_by->users.id"
+  ]
+ },
+ {
+  "tab": "client_document",
+  "ncols": 11,
+  "cols": [
+   "client_document_id",
+   "client_document_client_id",
+   "client_document_animal_id",
+   "client_document_template_id",
+   "client_document_text",
+   "client_document_advance",
+   "client_document_advance_cash_register_id",
+   "client_document_state",
+   "client_document_created_by",
+   "client_document_created_at",
+   "client_document_updated_at"
+  ],
+  "fks": [
+   "client_document_created_by->users.id",
+   "client_document_client_id->clients.client_id",
+   "client_document_advance_cash_register_id->cash_register.cash_register_id"
+  ]
+ },
+ {
+  "tab": "clients",
+  "ncols": 58,
+  "cols": [
+   "client_id",
+   "client_name",
+   "client_email",
+   "client_tlf_code",
+   "client_tlf",
+   "client_tlm_code",
+   "client_tlm",
+   "client_tlm2_code",
+   "client_tlm2",
+   "client_nif",
+   "client_foreign_nif",
+   "client_commitment_number",
+   "client_billing_reference",
+   "client_sex",
+   "client_address",
+   "client_birth",
+   "client_profession_id",
+   "postal_code",
+   "country",
+   "distrito",
+   "concelho",
+   "freguesia",
+   "client_cc",
+   "client_passport",
+   "adesao_motivo_id",
+   "canal_sms",
+   "canal_email",
+   "descServ",
+   "descProd",
+   "descProdComp",
+   "obs",
+   "client_state",
+   "client_inactive_reason",
+   "client_pvp",
+   "client_card",
+   "client_card_balance",
+   "client_card_total",
+   "client_referenced_by",
+   "client_espaco_fiscal",
+   "client_private",
+   "client_agis_id",
+   "client_keyinvoice",
+   "client_billing_provider",
+   "client_billing_id",
+   "client_billing_subclinic",
+   "consente_recordatorios",
+   "consente_promo",
+   "consente_estudos",
+   "consente_data",
+   "client_consent_doc",
+   "client_subclinic_id",
+   "client_real_debt",
+   "client_pending_debt",
+   "client_external_debt",
+   "client_total_drafts",
+   "client_created_by",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "client_referenced_by->referencing_clinics.referencing_clinic_id",
+   "client_subclinic_id->subclinics.subclinic_id",
+   "client_created_by->users.id"
+  ]
+ },
+ {
+  "tab": "cremation",
+  "ncols": 26,
+  "cols": [
+   "cremation_id",
+   "cremation_animal_id",
+   "cremation_animal_size",
+   "cremation_animal_weight",
+   "cremation_type",
+   "cremation_type_protocolo",
+   "cremation_client_type",
+   "cremation_collection",
+   "cremation_collection_local",
+   "cremation_collection_date",
+   "cremation_portagens",
+   "cremation_km",
+   "cremation_assistance",
+   "cremation_return",
+   "cremation_urgency",
+   "cremation_date",
+   "cremation_observations",
+   "cremation_value",
+   "cremation_discount_percentage",
+   "cremation_payment_type",
+   "cremation_state",
+   "cremation_invoice_id",
+   "cremation_created_at",
+   "cremation_created_by",
+   "cremation_updated_by",
+   "cremation_updated_at"
+  ],
+  "fks": [
+   "cremation_animal_id->animals.animal_id",
+   "cremation_created_by->users.id",
+   "cremation_updated_by->users.id",
+   "cremation_invoice_id->invoices.invoice_id"
+  ]
+ },
+ {
+  "tab": "cremation_products",
+  "ncols": 12,
+  "cols": [
+   "cremation_products_id",
+   "cremation_products_protocol",
+   "cremation_products_min_weight",
+   "cremation_products_max_weight",
+   "cremation_products_type",
+   "cremation_products_collection",
+   "cremation_products_collection_local",
+   "cremation_products_return",
+   "cremation_products_urgency",
+   "cremation_products_product_id",
+   "cremation_products_created_at",
+   "cremation_products_updated_at"
+  ],
+  "fks": [
+   "cremation_products_product_id->products_composed.product_composed_id"
+  ]
+ },
+ {
+  "tab": "crm_clients",
+  "ncols": 12,
+  "cols": [
+   "id_crm",
+   "crm_animal_id",
+   "crm_client_id",
+   "crm_contacto_doctor",
+   "crm_contacto",
+   "crm_contacto_canal",
+   "crm_contacto_motivo",
+   "crm_data_hora",
+   "crm_obs",
+   "crm_state",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "crm_client_id->clients.client_id",
+   "crm_contacto_doctor->users.id",
+   "crm_animal_id->animals.animal_id"
+  ]
+ },
+ {
+  "tab": "document_templates",
+  "ncols": 7,
+  "cols": [
+   "template_id",
+   "model_type",
+   "model_subtype",
+   "document",
+   "created_by",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "created_by->users.id"
+  ]
+ },
+ {
+  "tab": "donations",
+  "ncols": 11,
+  "cols": [
+   "donation_id",
+   "donation_user_id",
+   "donation_client_id",
+   "donation_nif",
+   "donation_type",
+   "donation_cash_register_id",
+   "donation_value",
+   "donation_description",
+   "donation_status",
+   "donation_created_at",
+   "donation_updated_at"
+  ],
+  "fks": [
+   "donation_cash_register_id->cash_register.cash_register_id",
+   "donation_client_id->clients.client_id",
+   "donation_user_id->users.id"
+  ]
+ },
+ {
+  "tab": "event_reasons",
+  "ncols": 8,
+  "cols": [
+   "event_reason_id",
+   "event_reason_name",
+   "event_overlap",
+   "event_duration",
+   "event_reason_active",
+   "event_reason_color",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "events",
+  "ncols": 12,
+  "cols": [
+   "event_id",
+   "event_reason_id",
+   "event_user_id",
+   "event_start_time",
+   "event_end_time",
+   "event_status",
+   "event_obs",
+   "event_subclinic_id",
+   "event_shared_between_subclinics",
+   "event_created_by",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "event_reason_id->event_reasons.event_reason_id",
+   "event_user_id->users.id",
+   "event_created_by->users.id",
+   "event_subclinic_id->subclinics.subclinic_id"
+  ]
+ },
+ {
+  "tab": "events_deleted",
+  "ncols": 12,
+  "cols": [
+   "event_deleted_id",
+   "event_deleted_reason_id",
+   "event_deleted_user_id",
+   "event_deleted_start_time",
+   "event_deleted_end_time",
+   "event_deleted_status",
+   "event_deleted_obs",
+   "event_deleted_subclinic_id",
+   "event_deleted_shared_between_subclinics",
+   "event_deleted_created_by",
+   "event_deleted_created_at",
+   "event_deleted_updated_at"
+  ],
+  "fks": [
+   "event_deleted_created_by->users.id",
+   "event_deleted_reason_id->event_reasons.event_reason_id",
+   "event_deleted_subclinic_id->subclinics.subclinic_id",
+   "event_deleted_user_id->users.id"
+  ]
+ },
+ {
+  "tab": "extra_modules",
+  "ncols": 4,
+  "cols": [
+   "id",
+   "module",
+   "state",
+   "updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "health_insurances",
+  "ncols": 8,
+  "cols": [
+   "health_insurance_id",
+   "health_insurance_entity",
+   "health_insurance_name",
+   "health_insurance_products",
+   "health_insurance_services",
+   "health_insurance_active",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "hospitalization_clinic_evolution",
+  "ncols": 7,
+  "cols": [
+   "clinic_evolution_id",
+   "clinic_evolution_hosp_id",
+   "clinic_evolution_message",
+   "clinic_evolution_doctor_id",
+   "clinic_evolution_updated_by",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "clinic_evolution_updated_by->users.id",
+   "clinic_evolution_hosp_id->hospitalizations.hosp_id",
+   "clinic_evolution_doctor_id->users.id"
+  ]
+ },
+ {
+  "tab": "hospitalization_diagnosis",
+  "ncols": 8,
+  "cols": [
+   "hospitalization_diagnosis_id",
+   "hosp_id",
+   "diagnosis_id",
+   "diagnosis_observations",
+   "created_by",
+   "updated_by",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "hosp_id->hospitalizations.hosp_id",
+   "created_by->users.id",
+   "updated_by->users.id"
+  ]
+ },
+ {
+  "tab": "hospitalization_global_tasks",
+  "ncols": 14,
+  "cols": [
+   "hospitalization_global_task_id",
+   "hospitalization_global_task_hosp_id",
+   "hospitalization_global_task_frequency",
+   "hospitalization_global_task_repetition_number",
+   "hospitalization_global_task_highlight",
+   "hospitalization_global_task_sos",
+   "hospitalization_global_task_always_visible",
+   "hospitalization_global_task_payment_method",
+   "hospitalization_global_task_created_at",
+   "hospitalization_global_task_created_by",
+   "hospitalization_global_task_updated_at",
+   "hospitalization_global_task_updated_by",
+   "hospitalization_global_task_closed_at",
+   "hospitalization_global_task_closed_by"
+  ],
+  "fks": [
+   "hospitalization_global_task_hosp_id->hospitalizations.hosp_id",
+   "hospitalization_global_task_created_by->users.id",
+   "hospitalization_global_task_updated_by->users.id",
+   "hospitalization_global_task_closed_by->users.id"
+  ]
+ },
+ {
+  "tab": "hospitalization_messages",
+  "ncols": 5,
+  "cols": [
+   "hosp_message_id",
+   "message",
+   "hosp_id",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "hosp_id->hospitalizations.hosp_id"
+  ]
+ },
+ {
+  "tab": "hospitalization_physical_exam",
+  "ncols": 12,
+  "cols": [
+   "hosp_physical_exam_id",
+   "pe_body_condition",
+   "pe_attitude",
+   "pe_TRC",
+   "pe_heart_rate",
+   "pe_respiratory_frequency",
+   "pe_blood_pressure",
+   "pe_hydration",
+   "pe_mucous_membrane",
+   "pe_temperature",
+   "pe_ganglia",
+   "pe_notes"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "hospitalization_products",
+  "ncols": 19,
+  "cols": [
+   "hospitalization_product_id",
+   "hospitalization_product_product_info_id",
+   "hospitalization_product_product_composed_id",
+   "hospitalization_product_hospitalization_id",
+   "hospitalization_product_state",
+   "hospitalization_product_user_id",
+   "hospitalization_product_account_date",
+   "hospitalization_product_quantity",
+   "hospitalization_product_unit",
+   "hospitalization_product_pvp_with_iva",
+   "hospitalization_product_iva_id",
+   "hospitalization_product_discount_percentage",
+   "hospitalization_product_total",
+   "hospitalization_product_selected",
+   "hospitalization_product_otax",
+   "hospitalization_product_created_at",
+   "hospitalization_product_created_by",
+   "hospitalization_product_updated_at",
+   "hospitalization_product_updated_by"
+  ],
+  "fks": [
+   "hospitalization_product_product_info_id->products_info.product_info_id",
+   "hospitalization_product_product_composed_id->products_composed.product_composed_id",
+   "hospitalization_product_user_id->users.id",
+   "hospitalization_product_created_by->users.id",
+   "hospitalization_product_updated_by->users.id",
+   "hospitalization_product_iva_id->tax_vat.tax_id",
+   "hospitalization_product_hospitalization_id->hospitalizations.hosp_id"
+  ]
+ },
+ {
+  "tab": "hospitalization_products_composed",
+  "ncols": 9,
+  "cols": [
+   "hospitalization_product_composed_id",
+   "hospitalization_product_hospitalization_products_id",
+   "hospitalization_product_component_id",
+   "hospitalization_product_component_pvp",
+   "hospitalization_product_component_iva_id",
+   "hospitalization_product_component_quantity",
+   "hospitalization_product_component_discount_percentage",
+   "hospitalization_product_composed_created_at",
+   "hospitalization_product_composed_updated_at"
+  ],
+  "fks": [
+   "hospitalization_product_hospitalization_products_id->hospitalization_products.hospitalization_product_id",
+   "hospitalization_product_component_id->products_info.product_info_id",
+   "hospitalization_product_component_iva_id->tax_vat.tax_id"
+  ]
+ },
+ {
+  "tab": "hospitalization_soro_suplementation",
+  "ncols": 7,
+  "cols": [
+   "hospitalization_soro_suplementation_id",
+   "hospitalization_soro_suplementation_task_soro_id",
+   "hospitalization_soro_suplementation_type",
+   "hospitalization_soro_suplementation_quantity",
+   "hospitalization_soro_suplementation_units",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "hospitalization_soro_suplementation_task_soro_id->hospitalization_tasks_soro.hospitalization_task_soro_id",
+   "hospitalization_soro_suplementation_task_soro_id->hospitalization_tasks_soro.hospitalization_task_soro_id"
+  ]
+ },
+ {
+  "tab": "hospitalization_tasks_activities",
+  "ncols": 6,
+  "cols": [
+   "hospitalization_task_activity_id",
+   "hospitalization_task_activity_type",
+   "hospitalization_task_activity_subtype",
+   "hospitalization_task_activity_canal",
+   "hospitalization_task_activity_created_at",
+   "hospitalization_task_activity_updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "hospitalization_tasks_medication",
+  "ncols": 4,
+  "cols": [
+   "hospitalization_task_medication_id",
+   "hospitalization_task_medication_via",
+   "hospitalization_task_medication_created_at",
+   "hospitalization_task_medication_updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "hospitalization_tasks_monitoring",
+  "ncols": 6,
+  "cols": [
+   "hospitalization_task_monitoring_id",
+   "hospitalization_task_monitoring_type",
+   "hospitalization_task_monitoring_result",
+   "hospitalization_task_monitoring_physical_exam_id",
+   "hospitalization_task_monitoring_created_at",
+   "hospitalization_task_monitoring_updated_at"
+  ],
+  "fks": [
+   "hospitalization_task_monitoring_physical_exam_id->hospitalization_physical_exam.hosp_physical_exam_id"
+  ]
+ },
+ {
+  "tab": "hospitalization_tasks_soro",
+  "ncols": 10,
+  "cols": [
+   "hospitalization_task_soro_id",
+   "hospitalization_task_soro_type",
+   "hospitalization_task_soro_liters",
+   "hospitalization_task_soro_maintenance_tax",
+   "hospitalization_task_soro_ajuste",
+   "hospitalization_task_soro_final_tax",
+   "hospitalization_task_soro_suplementation",
+   "hospitalization_task_soro_suplementation_quantity",
+   "hospitalization_task_soro_created_at",
+   "hospitalization_task_soro_updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "hospitalization_types",
+  "ncols": 5,
+  "cols": [
+   "hosp_type_id",
+   "hosp_type_name",
+   "hosp_type_state",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "hospitalizations",
+  "ncols": 16,
+  "cols": [
+   "hosp_id",
+   "hosp_appointment_id",
+   "hosp_jaula",
+   "hosp_motivo_id",
+   "hosp_animal_state",
+   "hosp_type",
+   "hosp_doctor_resp",
+   "hosp_diagnosis",
+   "hosp_evolutionClinic",
+   "hosp_checkin",
+   "hosp_discharge_prev",
+   "hosp_checkout",
+   "hosp_alert",
+   "hosp_limit_account",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "hosp_appointment_id->appointments.appointment_id",
+   "hosp_doctor_resp->users.id",
+   "hosp_motivo_id->hotel_hosp_reasons.hotel_hosp_reason_id",
+   "hosp_type->hospitalization_types.hosp_type_id"
+  ]
+ },
+ {
+  "tab": "hospitalizations_tasks",
+  "ncols": 20,
+  "cols": [
+   "hospitalization_task_id",
+   "hospitalization_global_task_id",
+   "hospitalization_task_medication_id",
+   "hospitalization_task_soro_id",
+   "hospitalization_task_monitoring_id",
+   "hospitalization_task_hospitalization_product_id",
+   "hospitalization_task_activity_id",
+   "hospitalization_task_complementar_exam_id",
+   "hospitalization_task_date_and_time",
+   "hospitalization_task_description",
+   "hospitalization_task_created_by",
+   "hospitalization_task_updated_by",
+   "hospitalization_task_done_at",
+   "hospitalization_task_done_by",
+   "hospitalization_task_animal_state",
+   "hospitalization_task_observations",
+   "hospitalization_task_quantity",
+   "hospitalization_task_image",
+   "hospitalization_task_created_at",
+   "hospitalization_task_updated_at"
+  ],
+  "fks": [
+   "hospitalization_task_created_by->users.id",
+   "hospitalization_task_done_by->users.id",
+   "hospitalization_task_updated_by->users.id",
+   "hospitalization_task_hospitalization_product_id->hospitalization_products.hospitalization_product_id",
+   "hospitalization_task_complementar_exam_id->appointment_complementar_exams.appointment_complementar_exam_id",
+   "hospitalization_global_task_id->hospitalization_global_tasks.hospitalization_global_task_id",
+   "hospitalization_task_medication_id->hospitalization_tasks_medication.hospitalization_task_medication_id",
+   "hospitalization_task_soro_id->hospitalization_tasks_soro.hospitalization_task_soro_id",
+   "hospitalization_task_monitoring_id->hospitalization_tasks_monitoring.hospitalization_task_monitoring_id",
+   "hospitalization_task_activity_id->hospitalization_tasks_activities.hospitalization_task_activity_id"
+  ]
+ },
+ {
+  "tab": "hotel_cages",
+  "ncols": 6,
+  "cols": [
+   "id",
+   "code",
+   "name",
+   "species_id",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "hotel_hosp_reasons",
+  "ncols": 6,
+  "cols": [
+   "hotel_hosp_reason_id",
+   "hotel_hosp_reason_name",
+   "hotel_hosp_reason_active",
+   "hotel_hosp_reason_type",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "idexx_orders",
+  "ncols": 15,
+  "cols": [
+   "id",
+   "idexx_order_animal_id",
+   "idexx_order_appointment_id",
+   "idexx_order_hospitalization_id",
+   "idexx_order_id",
+   "idexx_order_ui_url",
+   "idexx_order_status",
+   "idexx_order_tests",
+   "idexx_order_ivls_serial_number",
+   "idexx_order_ivls_display_name",
+   "idexx_order_notes",
+   "idexx_order_created_by",
+   "idexx_order_created_at",
+   "idexx_order_updated_by",
+   "idexx_order_updated_at"
+  ],
+  "fks": [
+   "idexx_order_animal_id->animals.animal_id",
+   "idexx_order_appointment_id->appointments.appointment_id",
+   "idexx_order_created_by->users.id",
+   "idexx_order_hospitalization_id->hospitalizations.hosp_id",
+   "idexx_order_updated_by->users.id"
+  ]
+ },
+ {
+  "tab": "idexx_results",
+  "ncols": 9,
+  "cols": [
+   "id",
+   "idexx_result_id",
+   "idexx_result_order_id",
+   "idexx_result_status",
+   "idexx_result_analyzer",
+   "idexx_result_ivls_serial_number",
+   "idexx_result_veterinarian",
+   "idexx_result_created_at",
+   "idexx_result_updated_at"
+  ],
+  "fks": [
+   "idexx_result_order_id->idexx_orders.idexx_order_id"
+  ]
+ },
+ {
+  "tab": "integ_reference_fields",
+  "ncols": 6,
+  "cols": [
+   "integ_field_id",
+   "integ_field",
+   "integ_field_exam_type",
+   "integ_reference_in_use",
+   "integ_reference_mac",
+   "integ_field_identifier"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "internal_consumption",
+  "ncols": 7,
+  "cols": [
+   "ic_id",
+   "ic_product_info_id",
+   "ic_product_stock",
+   "ic_product_origin",
+   "ic_product_destination",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "ic_product_destination->internal_consumption_destinations.ic_destination_id",
+   "ic_product_info_id->products_info.product_info_id",
+   "ic_product_origin->internal_consumption_destinations.ic_destination_id"
+  ]
+ },
+ {
+  "tab": "internal_consumption_destinations",
+  "ncols": 6,
+  "cols": [
+   "ic_destination_id",
+   "ic_destination_name",
+   "ic_destination_state",
+   "ic_destination_observation",
+   "ic_destination_created_at",
+   "ic_destination_updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "internal_health_insurance",
+  "ncols": 5,
+  "cols": [
+   "internal_health_insurance_id",
+   "internal_health_insurance_name",
+   "internal_health_insurance_active",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "invoice_payment_type",
+  "ncols": 9,
+  "cols": [
+   "payment_type_id",
+   "payment_type_invoice_id",
+   "payment_type_advance_id",
+   "payment_type_donation_id",
+   "payment_type",
+   "payment_type_value",
+   "payment_type_value_agis",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "payment_type_donation_id->donations.donation_id",
+   "payment_type_invoice_id->invoices.invoice_id",
+   "payment_type_advance_id->advances.advance_id"
+  ]
+ },
+ {
+  "tab": "invoice_saphety_documents",
+  "ncols": 14,
+  "cols": [
+   "saphety_doc_id",
+   "saphety_invoice_id",
+   "saphety_receiver_vat",
+   "saphety_receiver_name",
+   "saphety_document_type",
+   "saphety_request_id",
+   "saphety_outbound_id",
+   "saphety_async_status",
+   "saphety_intg_status",
+   "saphety_notif_status",
+   "saphety_sent_by",
+   "saphety_error_detail",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "invoices",
+  "ncols": 51,
+  "cols": [
+   "invoice_id",
+   "invoice_user_id",
+   "invoice_visit_id",
+   "invoice_client_id",
+   "invoice_nif",
+   "invoice_cash_register_id",
+   "invoice_type",
+   "invoice_serie",
+   "parent_document_id",
+   "payment_method",
+   "payment_type",
+   "invoice_payment_service_id",
+   "paid_amount",
+   "invoice_total_amount",
+   "invoice_total_points",
+   "liquidated",
+   "discount_financial_value",
+   "discount_financial_percentage",
+   "invoice_retention",
+   "invoice_retention_value",
+   "invoice_external_invoice_id",
+   "invoice_advance_money",
+   "invoice_advance_doc_id",
+   "invoice_limit_date",
+   "invoice_delivery_method",
+   "invoice_transport_date",
+   "invoice_vehicle",
+   "invoice_observations",
+   "invoice_draft",
+   "status_cancel",
+   "invoice_void_reason",
+   "invoice_cash_register_returned_value",
+   "codigo_AT",
+   "invoice_agis_id",
+   "invoice_agis_doc_id",
+   "invoice_agis_doc_ref",
+   "invoice_keyinvoice_id",
+   "invoice_keyinvoice_doc_ref",
+   "invoice_external_keyinvoice_id",
+   "invoice_billing_provider",
+   "invoice_billing_id",
+   "invoice_billing_doc_ref",
+   "invoice_external_billing_id",
+   "invoice_state",
+   "invoice_communicated",
+   "invoice_expedition_status",
+   "invoice_expedition_tracking_number",
+   "invoice_budget_hosp_id",
+   "invoice_issue_date",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "invoice_budget_hosp_id->hospitalizations.hosp_id",
+   "invoice_payment_service_id->invoices_payment_services.invoice_payment_service_id",
+   "invoice_visit_id->visits.visit_id",
+   "invoice_client_id->clients.client_id",
+   "invoice_cash_register_id->cash_register.cash_register_id",
+   "invoice_advance_doc_id->client_document.client_document_id",
+   "invoice_user_id->users.id",
+   "invoice_external_invoice_id->invoices_external.invoice_external_invoice_id"
+  ]
+ },
+ {
+  "tab": "invoices_external",
+  "ncols": 13,
+  "cols": [
+   "invoice_external_invoice_id",
+   "invoice_external_visit_id",
+   "invoice_external_invoice_nif",
+   "invoice_external_cash_register_id",
+   "invoice_external_date",
+   "invoice_external_num",
+   "invoice_external_total",
+   "invoice_external_paid_amount",
+   "invoice_external_keyinvoice_id",
+   "invoice_external_billing_provider",
+   "invoice_external_billing_id",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "invoice_external_visit_id->visits.visit_id",
+   "invoice_external_cash_register_id->cash_register.cash_register_id"
+  ]
+ },
+ {
+  "tab": "invoices_iva",
+  "ncols": 10,
+  "cols": [
+   "invoice_iva_id",
+   "invoice_id",
+   "invoice_iva_external_invoice_id",
+   "invoice_iva_subclinic_id",
+   "invoice_iva_taxa",
+   "invoice_iva_total",
+   "invoice_total_pago",
+   "receipt_iva_pago",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "invoice_id->invoices.invoice_id",
+   "invoice_iva_external_invoice_id->invoices_external.invoice_external_invoice_id",
+   "invoice_iva_subclinic_id->subclinics.subclinic_id",
+   "invoice_iva_taxa->tax_vat.tax_id"
+  ]
+ },
+ {
+  "tab": "messages",
+  "ncols": 7,
+  "cols": [
+   "message_id",
+   "message_text",
+   "message_seen",
+   "receiver",
+   "created_by",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "created_by->users.id",
+   "receiver->users.id"
+  ]
+ },
+ {
+  "tab": "order_items",
+  "ncols": 8,
+  "cols": [
+   "id",
+   "order_id",
+   "product_info_id",
+   "quantity",
+   "quantity_received",
+   "unit_price",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "order_id->orders.order_id",
+   "product_info_id->products_info.product_info_id"
+  ]
+ },
+ {
+  "tab": "order_products_cart",
+  "ncols": 6,
+  "cols": [
+   "order_product_id",
+   "order_subclinic_id",
+   "product_info_id",
+   "quantity",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "order_subclinic_id->subclinics.subclinic_id",
+   "product_info_id->products_info.product_info_id"
+  ]
+ },
+ {
+  "tab": "orders",
+  "ncols": 9,
+  "cols": [
+   "order_id",
+   "order_subclinic_id",
+   "order_provider_id",
+   "order_date",
+   "order_delivery_date",
+   "order_status",
+   "order_observations",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "order_subclinic_id->subclinics.subclinic_id",
+   "order_provider_id->providers.provider_id"
+  ]
+ },
+ {
+  "tab": "periodics",
+  "ncols": 8,
+  "cols": [
+   "periodic_id",
+   "periodic",
+   "periodic_active",
+   "periodic_species",
+   "periodic_sms_agenda_visit_reason_id",
+   "periodic_sms_agenda_state",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "periodic_sms_agenda_visit_reason_id->visit_hosp_reasons.id"
+  ]
+ },
+ {
+  "tab": "periodics_animals",
+  "ncols": 12,
+  "cols": [
+   "periodic_animal_id",
+   "periodic_id",
+   "animal_id",
+   "doctor_id",
+   "state",
+   "last_periodic_date",
+   "periodic_date",
+   "periodic_date_done",
+   "periodic_animal_obs",
+   "periodic_animal_subclinic_id",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "animal_id->animals.animal_id",
+   "periodic_animal_subclinic_id->subclinics.subclinic_id",
+   "periodic_id->periodics.periodic_id",
+   "doctor_id->users.id"
+  ]
+ },
+ {
+  "tab": "periodics_repetition_duration",
+  "ncols": 6,
+  "cols": [
+   "repetition_id",
+   "repetition_number",
+   "repetition_unit",
+   "repetition_state",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "product_brands",
+  "ncols": 5,
+  "cols": [
+   "brand_id",
+   "brand_name",
+   "brand_state",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "product_quantity_discounts",
+  "ncols": 7,
+  "cols": [
+   "product_quantity_discount_id",
+   "product_info_id",
+   "quantity",
+   "discount_percentage",
+   "state",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "product_info_id->products_info.product_info_id"
+  ]
+ },
+ {
+  "tab": "products_car_composed",
+  "ncols": 9,
+  "cols": [
+   "product_car_composed_id",
+   "product_car_line_id",
+   "component_id",
+   "component_pvp",
+   "component_iva",
+   "component_quantity",
+   "component_discount_percentage",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "product_car_line_id->products_car_line.product_car_line_id",
+   "component_iva->tax_vat.tax_id"
+  ]
+ },
+ {
+  "tab": "products_car_line",
+  "ncols": 21,
+  "cols": [
+   "product_car_line_id",
+   "client_id",
+   "animal_id",
+   "subclinic_id",
+   "product_info_id",
+   "product_composed_id",
+   "unit",
+   "quantity",
+   "pvp",
+   "pvp_value",
+   "pvp_with_iva",
+   "iva",
+   "discount_percentage",
+   "total",
+   "status",
+   "appointment_id",
+   "hosp_id",
+   "user_created",
+   "user_updated",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "client_id->clients.client_id",
+   "iva->tax_vat.tax_id",
+   "animal_id->animals.animal_id",
+   "subclinic_id->subclinics.subclinic_id",
+   "product_info_id->products_info.product_info_id",
+   "product_composed_id->products_composed.product_composed_id",
+   "user_created->users.id",
+   "user_updated->users.id",
+   "appointment_id->appointments.appointment_id",
+   "hosp_id->hospitalizations.hosp_id"
+  ]
+ },
+ {
+  "tab": "products_composed",
+  "ncols": 12,
+  "cols": [
+   "product_composed_id",
+   "product_composed_code",
+   "product_composed_subclinic_id",
+   "product_composed_name",
+   "product_composed_external_description",
+   "product_composed_state",
+   "product_composed_agis_id",
+   "product_composed_keyinvoice_id",
+   "product_composed_billing_provider",
+   "product_composed_billing_id",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "product_composed_subclinic_id->subclinics.subclinic_id"
+  ]
+ },
+ {
+  "tab": "products_composed_info",
+  "ncols": 16,
+  "cols": [
+   "pci_id",
+   "pci_product_composed_id",
+   "pci_product_info_id",
+   "pci_quantity",
+   "pci_sell_price1",
+   "pci_sell_price1_discount_percentage",
+   "pci_sell_price2",
+   "pci_sell_price2_discount_percentage",
+   "pci_sell_price3",
+   "pci_sell_price3_discount_percentage",
+   "pci_discount_percentage",
+   "pci_keyinvoice_id",
+   "pci_billing_provider",
+   "pci_billing_id",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "pci_product_composed_id->products_composed.product_composed_id",
+   "pci_product_info_id->products_info.product_info_id"
+  ]
+ },
+ {
+  "tab": "products_history",
+  "ncols": 16,
+  "cols": [
+   "product_history_id",
+   "product_id",
+   "composed_id",
+   "operation",
+   "sale_id",
+   "record_id",
+   "transfer_id",
+   "internal_consumption_id",
+   "purchase_item_id",
+   "sale_external_id",
+   "quantity",
+   "current_stock",
+   "product_batch_id",
+   "created_by",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "product_batch_id->products_info_batch.product_info_batch_id",
+   "product_id->products_info.product_info_id",
+   "sale_id->sales.sale_id",
+   "record_id->records.record_id",
+   "transfer_id->transfers.transfer_id",
+   "internal_consumption_id->internal_consumption.ic_id",
+   "purchase_item_id->purchase_items.purchase_item_id",
+   "sale_external_id->sales_external.sale_external_id"
+  ]
+ },
+ {
+  "tab": "products_info",
+  "ncols": 46,
+  "cols": [
+   "product_info_id",
+   "product_info_unique_id",
+   "product_config_id_bak",
+   "product_info_code",
+   "product_barcode",
+   "product_aim_code",
+   "product_info_subclinic_id",
+   "product_info_description",
+   "product_info_description2",
+   "product_info_type",
+   "product_info_subfamily_id",
+   "product_brand_id",
+   "product_category",
+   "product_iva_buy",
+   "product_iva_sell",
+   "product_sell_price1",
+   "product_sell_price2",
+   "product_sell_price3",
+   "product_conversion_factor",
+   "product_current_stock",
+   "product_max_stock",
+   "product_min_stock",
+   "product_open_date",
+   "product_expiration_date",
+   "product_state",
+   "product_otax",
+   "product_unit",
+   "product_cost_price",
+   "product_unit_buy",
+   "product_sell_price_unit",
+   "product_check_stock",
+   "product_check_internal_consumption",
+   "product_check_stock_batch",
+   "product_agis_id",
+   "product_keyinvoice_id",
+   "product_billing_provider",
+   "product_billing_id",
+   "product_billing_batch_ref",
+   "product_keyinvoice_batch_ref",
+   "product_last_provider_id",
+   "product_info_bio2_code",
+   "product_observations",
+   "product_genialoop_measure",
+   "product_check_stock_date",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "product_info_subclinic_id->subclinics.subclinic_id",
+   "product_brand_id->product_brands.brand_id",
+   "product_iva_buy->tax_vat.tax_id",
+   "product_iva_sell->tax_vat.tax_id",
+   "product_info_subfamily_id->products_info_subfamilies.product_info_subfamily_id"
+  ]
+ },
+ {
+  "tab": "products_info_batch",
+  "ncols": 11,
+  "cols": [
+   "product_info_batch_id",
+   "product_id",
+   "product_batch_description",
+   "product_batch_starting_quantity",
+   "product_batch_current_quantity",
+   "product_batch_date",
+   "product_batch_delivery",
+   "product_batch_storage",
+   "product_batch_observations",
+   "product_batch_created_at",
+   "product_batch_updated_at"
+  ],
+  "fks": [
+   "product_id->products_info.product_info_id"
+  ]
+ },
+ {
+  "tab": "products_info_families",
+  "ncols": 6,
+  "cols": [
+   "product_info_family_id",
+   "product_info_family_name",
+   "product_info_family_section_id",
+   "product_info_family_state",
+   "product_info_family_created_at",
+   "product_info_family_updated_at"
+  ],
+  "fks": [
+   "product_info_family_section_id->products_info_sections.product_info_section_id"
+  ]
+ },
+ {
+  "tab": "products_info_sections",
+  "ncols": 5,
+  "cols": [
+   "product_info_section_id",
+   "product_info_section_name",
+   "product_info_section_state",
+   "product_info_section_created_at",
+   "product_info_section_updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "products_info_subfamilies",
+  "ncols": 6,
+  "cols": [
+   "product_info_subfamily_id",
+   "product_info_subfamily_name",
+   "product_info_subfamily_family_id",
+   "product_info_subfamily_state",
+   "product_info_subfamily_created_at",
+   "product_info_subfamily_updated_at"
+  ],
+  "fks": [
+   "product_info_subfamily_family_id->products_info_families.product_info_family_id"
+  ]
+ },
+ {
+  "tab": "providers",
+  "ncols": 32,
+  "cols": [
+   "provider_id",
+   "provider_code",
+   "provider_name",
+   "provider_nif",
+   "provider_email",
+   "provider_phone_code",
+   "provider_phone",
+   "provider_mobile_code",
+   "provider_mobile",
+   "provider_address",
+   "provider_postal_code",
+   "provider_country",
+   "provider_district",
+   "provider_county",
+   "provider_parish",
+   "provider_billing_address",
+   "provider_billing_postal_code",
+   "provider_billing_district",
+   "provider_billing_county",
+   "provider_billing_parish",
+   "provider_observations",
+   "provider_delivery_period",
+   "provider_payment_terms",
+   "provider_currency",
+   "provider_manager_name",
+   "provider_manager_email",
+   "provider_manager_phone_code",
+   "provider_manager_phone",
+   "provider_payment_methods",
+   "provider_state",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "purchase_items",
+  "ncols": 15,
+  "cols": [
+   "purchase_item_id",
+   "purchase_item_purchase_id",
+   "purchase_item_product_info_id",
+   "purchase_item_quantity",
+   "purchase_item_conversion_factor",
+   "purchase_item_pvp_value",
+   "purchase_item_iva",
+   "purchase_item_iva_value",
+   "purchase_item_discount_value",
+   "purchase_item_discount_percentage",
+   "purchase_item_total",
+   "purchase_item_unit",
+   "purchase_qtd_returned",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "purchase_item_purchase_id->purchases.purchase_id",
+   "purchase_item_product_info_id->products_info.product_info_id",
+   "purchase_item_iva->tax_vat.tax_id"
+  ]
+ },
+ {
+  "tab": "purchases",
+  "ncols": 20,
+  "cols": [
+   "purchase_id",
+   "purchase_user_id",
+   "purchase_order_id",
+   "purchase_type",
+   "parent_document_id",
+   "purchase_provider_id",
+   "purchase_date",
+   "purchase_document_provider",
+   "purchase_observacao",
+   "purchase_modo_pagamento",
+   "financial_discount_value",
+   "financial_discount_percentage",
+   "prompt_payment_discount_value",
+   "prompt_payment_discount_percentage",
+   "purchase_vat_value",
+   "purchase_discount_after_vat",
+   "purchase_subclinic_id",
+   "purchase_total",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "purchase_user_id->users.id",
+   "purchase_order_id->orders.order_id",
+   "purchase_provider_id->providers.provider_id",
+   "purchase_subclinic_id->subclinics.subclinic_id"
+  ]
+ },
+ {
+  "tab": "purchases_payments_dates",
+  "ncols": 8,
+  "cols": [
+   "purchase_payment_date_id",
+   "purchase_id",
+   "purchase_payment_date",
+   "purchase_payment_date_value",
+   "purchase_payment_status",
+   "purchase_payment_type",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "purchase_id->purchases.purchase_id"
+  ]
+ },
+ {
+  "tab": "receipt_parent_documents",
+  "ncols": 9,
+  "cols": [
+   "receipt_parent_document_id",
+   "receipt_id",
+   "invoice_id",
+   "invoice_external_id",
+   "paid_amount",
+   "transaction_number",
+   "payment_date",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "receipt_id->invoices.invoice_id",
+   "invoice_id->invoices.invoice_id",
+   "invoice_external_id->invoices_external.invoice_external_invoice_id"
+  ]
+ },
+ {
+  "tab": "records",
+  "ncols": 9,
+  "cols": [
+   "record_id",
+   "record_subclinic_id",
+   "record_type",
+   "record_product_info_id",
+   "record_quantity",
+   "record_observations",
+   "record_provider_id",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "record_product_info_id->products_info.product_info_id",
+   "record_provider_id->providers.provider_id",
+   "record_subclinic_id->subclinics.subclinic_id"
+  ]
+ },
+ {
+  "tab": "recurring_messages",
+  "ncols": 12,
+  "cols": [
+   "recurring_message_id",
+   "recurring_message_name",
+   "recurring_message_type",
+   "recurring_message_type_id",
+   "recurring_message_days_to_send",
+   "recurring_message_method",
+   "recurring_message_title",
+   "recurring_message_text_sms",
+   "recurring_message_text_email",
+   "recurring_message_state",
+   "recurring_message_created_at",
+   "recurring_message_updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "referencing_clinics",
+  "ncols": 5,
+  "cols": [
+   "referencing_clinic_id",
+   "referencing_clinic_name",
+   "referencing_clinic_active",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "resources_businesshours",
+  "ncols": 12,
+  "cols": [
+   "resources_businesshours_id",
+   "resources_businesshours_rule_id",
+   "resources_businesshours_resource_id",
+   "resources_businesshours_startH",
+   "resources_businesshours_endH",
+   "resources_businesshours_startDate",
+   "resources_businesshours_endDate",
+   "resources_businesshours_state",
+   "resources_businesshours_created_by",
+   "resources_businesshours_created_at",
+   "resources_businesshours_updated_by",
+   "resources_businesshours_updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "resources_businesshours_deleted",
+  "ncols": 12,
+  "cols": [
+   "rbhd_id",
+   "rbhd_rule_id",
+   "rbhd_resource_id",
+   "rbhd_startH",
+   "rbhd_endH",
+   "rbhd_startDate",
+   "rbhd_endDate",
+   "rbhd_state",
+   "rbhd_created_by",
+   "rbhd_created_at",
+   "rbhd_updated_by",
+   "rbhd_updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "resources_businesshours_rules",
+  "ncols": 18,
+  "cols": [
+   "resource_businesshour_rule_id",
+   "resource_businesshour_rule_resource_id",
+   "resource_businesshour_rule_subc_id",
+   "resource_businesshour_rule_start_hour",
+   "resource_businesshour_rule_end_hour",
+   "resource_businesshour_rule_start_date",
+   "resource_businesshour_rule_end_date",
+   "resource_businesshour_rule_freq_type",
+   "resource_businesshour_rule_freq_each",
+   "resource_businesshour_rule_weekdays",
+   "resource_businesshour_rule_freq_limit_type",
+   "resource_businesshour_rule_freq_limit_date",
+   "resource_businesshour_rule_freq_limit_ocurr",
+   "resource_businesshour_rule_state",
+   "resource_businesshour_rule_created_by",
+   "resource_businesshour_rule_created_at",
+   "resource_businesshour_rule_updated_by",
+   "resource_businesshour_rule_updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "roles",
+  "ncols": 7,
+  "cols": [
+   "id",
+   "name",
+   "description",
+   "permissions",
+   "state",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "sales",
+  "ncols": 23,
+  "cols": [
+   "sale_id",
+   "sale_invoice_id",
+   "sale_product_info_id",
+   "sale_product_composed_id",
+   "sale_product_description",
+   "sale_subclinic_id",
+   "sale_quantity",
+   "sale_unit",
+   "sale_pvp",
+   "sale_pvp_value",
+   "sale_pvp_with_iva",
+   "sale_iva",
+   "sale_value_iva",
+   "sale_batch_id",
+   "sale_discount_value",
+   "sale_discount_percentage",
+   "sale_discount_financial_value",
+   "sale_total",
+   "sale_product_employee_id",
+   "sale_returned",
+   "sale_summary",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "sale_batch_id->products_info_batch.product_info_batch_id",
+   "sale_invoice_id->invoices.invoice_id",
+   "sale_product_info_id->products_info.product_info_id",
+   "sale_subclinic_id->subclinics.subclinic_id",
+   "sale_product_employee_id->users.id",
+   "sale_iva->tax_vat.tax_id"
+  ]
+ },
+ {
+  "tab": "sales_composed",
+  "ncols": 14,
+  "cols": [
+   "sale_composed_id",
+   "sale_id",
+   "component_id",
+   "component_pvp",
+   "component_iva",
+   "component_value_iva",
+   "component_quantity",
+   "component_batch_id",
+   "component_discount_percentage",
+   "component_discount_percentage_agis",
+   "component_discount_financial_value",
+   "component_total",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "component_batch_id->products_info_batch.product_info_batch_id",
+   "sale_id->sales.sale_id",
+   "component_iva->tax_vat.tax_id"
+  ]
+ },
+ {
+  "tab": "sales_external",
+  "ncols": 26,
+  "cols": [
+   "sale_external_id",
+   "sale_external_number",
+   "sale_external_client_id",
+   "sale_external_nif",
+   "sale_external_type",
+   "sale_external_origin_type",
+   "sale_external_product_info_id",
+   "sale_external_subclinic_id",
+   "sale_external_quantity",
+   "sale_external_pvp_value",
+   "sale_external_iva",
+   "sale_external_discount_value",
+   "sale_external_discount_percentage",
+   "sale_external_total",
+   "sale_external_employee_id",
+   "sale_external_parent_document",
+   "sale_agis_id",
+   "sale_agis_doc_id",
+   "sale_agis_doc_ref",
+   "sale_keyinvoice_doc_id",
+   "sale_keyinvoice_doc_ref",
+   "sale_billing_provider",
+   "sale_billing_id",
+   "sale_billing_doc_ref",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "sale_external_client_id->clients.client_id",
+   "sale_external_product_info_id->products_info.product_info_id",
+   "sale_external_subclinic_id->subclinics.subclinic_id",
+   "sale_external_employee_id->users.id",
+   "sale_external_iva->tax_vat.tax_id"
+  ]
+ },
+ {
+  "tab": "schedule_filters",
+  "ncols": 13,
+  "cols": [
+   "filter_id",
+   "filter_user_id",
+   "filter_visit_type_id",
+   "filter_visit_type_order",
+   "filter_event_reason_id",
+   "filter_event_reason_order",
+   "filter_doctor_id",
+   "filter_doctor_order",
+   "filter_room_id",
+   "filter_room_order",
+   "filter_value",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "filter_room_id->visit_rooms.visit_room_id",
+   "filter_event_reason_id->event_reasons.event_reason_id",
+   "filter_visit_type_id->visit_hosp_reasons.id",
+   "filter_user_id->users.id",
+   "filter_doctor_id->users.id"
+  ]
+ },
+ {
+  "tab": "schedule_view_configs",
+  "ncols": 7,
+  "cols": [
+   "schedules_view_config_id",
+   "schedule_view_config_user_id",
+   "schedule_view_config_allDaySlot",
+   "schedule_view_config_hideUnvbVets",
+   "schedule_view_config_hideFreeVets",
+   "schedule_view_config_created_at",
+   "schedule_view_config_updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "tasks_feedback",
+  "ncols": 6,
+  "cols": [
+   "feedback_id",
+   "feedback_alert_task_id",
+   "feedback_message",
+   "feedback_answer",
+   "feedback_created_at",
+   "feedback_updated_at"
+  ],
+  "fks": [
+   "feedback_alert_task_id->alert_tasks.alert_task_id"
+  ]
+ },
+ {
+  "tab": "tax_vat",
+  "ncols": 10,
+  "cols": [
+   "tax_id",
+   "description",
+   "active",
+   "code",
+   "zone",
+   "value",
+   "exemption_code",
+   "buy_or_sell",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "transfers",
+  "ncols": 8,
+  "cols": [
+   "transfer_id",
+   "transfer_subclinic_origin_id",
+   "transfer_subclinic_destiny_id",
+   "transfer_user_id",
+   "transfer_product_info_id",
+   "transfer_quantity",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "transfer_subclinic_origin_id->subclinics.subclinic_id",
+   "transfer_subclinic_destiny_id->subclinics.subclinic_id",
+   "transfer_user_id->users.id"
+  ]
+ },
+ {
+  "tab": "user_release_seen",
+  "ncols": 3,
+  "cols": [
+   "user_id",
+   "version",
+   "seen_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "user_roles",
+  "ncols": 6,
+  "cols": [
+   "id",
+   "user_id",
+   "subclinic_id",
+   "role_id",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "role_id->roles.id",
+   "subclinic_id->subclinics.subclinic_id",
+   "user_id->users.id"
+  ]
+ },
+ {
+  "tab": "user_subclinics",
+  "ncols": 8,
+  "cols": [
+   "id",
+   "user_id",
+   "subclinic_id",
+   "state",
+   "created_by",
+   "created_at",
+   "updated_by",
+   "updated_at"
+  ],
+  "fks": [
+   "created_by->users.id",
+   "subclinic_id->subclinics.subclinic_id",
+   "updated_by->users.id",
+   "user_id->users.id"
+  ]
+ },
+ {
+  "tab": "users",
+  "ncols": 15,
+  "cols": [
+   "id",
+   "name",
+   "email",
+   "tlf",
+   "sex",
+   "address",
+   "level_id",
+   "pic",
+   "state",
+   "schedule_color",
+   "user_language",
+   "last_subclinic_id",
+   "skip_subclinic_selection",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "last_subclinic_id->subclinics.subclinic_id"
+  ]
+ },
+ {
+  "tab": "visit_hosp_reasons",
+  "ncols": 9,
+  "cols": [
+   "id",
+   "reason",
+   "reason_active",
+   "reason_duration",
+   "reason_overlap",
+   "reason_color",
+   "reason_sms_agenda_state",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "visit_rooms",
+  "ncols": 7,
+  "cols": [
+   "visit_room_id",
+   "visit_room_subclinic_id",
+   "visit_room_name",
+   "visit_room_state",
+   "visit_room_color",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "visits",
+  "ncols": 26,
+  "cols": [
+   "visit_id",
+   "visit_subclinic_id",
+   "visit_scheduled_date",
+   "visit_scheduled_end_time",
+   "visit_entrance_time",
+   "visit_start_time",
+   "visit_end_time",
+   "visit_scheduled",
+   "visit_hospitalization",
+   "visit_from_sms_agenda",
+   "visit_room_waiting",
+   "visit_room_attendance",
+   "visit_observations",
+   "visit_observations_products",
+   "visit_status_id",
+   "visit_cancel_justification",
+   "visit_condition",
+   "visit_reason_id",
+   "visit_animal_id",
+   "visit_client_id",
+   "visit_user_id",
+   "visit_created_by",
+   "visit_room_id",
+   "visit_cage_id",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": [
+   "visit_cage_id->hotel_cages.id",
+   "visit_created_by->users.id",
+   "visit_reason_id->visit_hosp_reasons.id",
+   "visit_room_id->visit_rooms.visit_room_id",
+   "visit_subclinic_id->subclinics.subclinic_id",
+   "visit_animal_id->animals.animal_id",
+   "visit_client_id->clients.client_id",
+   "visit_user_id->users.id"
+  ]
+ },
+ {
+  "tab": "visits_canceled",
+  "ncols": 25,
+  "cols": [
+   "visit_canceled_id",
+   "visit_canceled_subclinic_id",
+   "visit_canceled_scheduled_date",
+   "visit_canceled_scheduled_end_time",
+   "visit_canceled_entrance_time",
+   "visit_canceled_start_time",
+   "visit_canceled_end_time",
+   "visit_canceled_scheduled",
+   "visit_canceled_hospitalization",
+   "visit_canceled_room_waiting",
+   "visit_canceled_room_attendance",
+   "visit_canceled_observations",
+   "visit_canceled_observations_products",
+   "visit_canceled_status_id",
+   "visit_canceled_cancel_justification",
+   "visit_canceled_condition",
+   "visit_canceled_reason_id",
+   "visit_canceled_animal_id",
+   "visit_canceled_client_id",
+   "visit_canceled_user_id",
+   "visit_canceled_created_by",
+   "visit_canceled_room_id",
+   "visit_canceled_cage_id",
+   "visit_canceled_created_at",
+   "visit_canceled_updated_at"
+  ],
+  "fks": [
+   "visit_canceled_cage_id->hotel_cages.id",
+   "visit_canceled_room_id->visit_rooms.visit_room_id"
+  ]
+ },
+ {
+  "tab": "write_off_reasons",
+  "ncols": 5,
+  "cols": [
+   "write_off_id",
+   "write_off_reason",
+   "write_off_state",
+   "write_off_created_at",
+   "write_off_updated_at"
+  ],
+  "fks": []
+ },
+ {
+  "tab": "subclinics",
+  "ncols": 41,
+  "cols": [
+   "subclinic_id",
+   "subclinic_name",
+   "subclinic_state",
+   "subclinic_logo",
+   "subclinic_series",
+   "subclinic_address",
+   "subclinic_postal_code",
+   "subclinic_city",
+   "subclinic_clinical_director",
+   "subclinic_nif",
+   "subclinic_iban",
+   "subclinic_phone",
+   "subclinic_mobile",
+   "subclinic_email",
+   "subclinic_eupago_apikey",
+   "subclinic_eupago_client_id",
+   "subclinic_eupago_client_secret",
+   "subclinic_keyinvoice_apikey",
+   "subclinic_keyinvoice_intra_community_apikey",
+   "subclinic_keyinvoice_other_markets_apikey",
+   "subclinic_billing_provider",
+   "subclinic_billing_apikey",
+   "subclinic_unicre_merchant_id",
+   "subclinic_unicre_apikey",
+   "subclinic_cae",
+   "subclinic_cellphone_sender_id",
+   "subclinic_email_sender_id",
+   "subclinic_color",
+   "subclinic_default_message",
+   "subclinic_default_accept_message",
+   "subclinic_default_decline_message",
+   "subclinic_idexx_token",
+   "subclinic_unicre_gateway_username",
+   "subclinic_unicre_gateway_password",
+   "subclinic_autografus_user",
+   "subclinic_autografus_apikey",
+   "subclinic_autografus_devices",
+   "subclinic_saphety_username",
+   "subclinic_saphety_password",
+   "created_at",
+   "updated_at"
+  ],
+  "fks": []
+ }
+]
